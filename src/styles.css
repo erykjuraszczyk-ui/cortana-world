@@ -21,3 +21,5 @@
 .chat-form button{width:42px;flex:0 0 42px;border:1px solid #64dfff68;border-radius:9px;background:#64dfff19;color:#c9faff;font-size:19px;cursor:pointer}
 .chat-form button:disabled{opacity:.55;cursor:wait}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+.inventory-counter{display:inline-flex;align-items:center;margin-top:10px;padding:6px 8px;border:1px solid #76e6ff36;border-radius:6px;background:#071a2a9c;color:#aeefff;font-size:8px;letter-spacing:.12em}

@@ -17,7 +17,7 @@ Otwórz adres wyświetlony przez Vite (zwykle http://localhost:5173).
 
 - **WASD / strzałki** — ruch
 - **Shift** — bieg
-- **E** — interakcja z przekaźnikiem lub rozmowa
+- **E** — zbieranie fragmentów danych lub interakcja z przekaźnikiem
 - **Mysz** — obrót kamery po kliknięciu i przeciągnięciu
 - **Przyciski ekranowe** — sterowanie dotykowe na telefonie
 
@@ -28,7 +28,8 @@ Otwórz adres wyświetlony przez Vite (zwykle http://localhost:5173).
 - scena 3D w Three.js z terenem i przezroczystą kopułą;
 - kamera trzecioosobowa oraz ruch postaci;
 - Cytadela Cortany, kryształy i stacja przekaźnikowa;
-- pierwsza misja: aktywowanie przekaźnika;
+- pierwsza misja wieloetapowa: zebranie trzech fragmentów danych, a następnie aktywacja przekaźnika;
+- animowane obiekty do zebrania, licznik postępu i trwały zapis ekwipunku w localStorage;
 - panel statusu i podstawowy dialog przewodniczki;
 - automatyczny zapis ukończenia misji w localStorage;
 - responsywny interfejs dla komputera i telefonu.
@@ -57,3 +58,10 @@ Nie umieszczaj kluczy API w kodzie frontendu ani w publicznym repozytorium. Sekr
 Backend FastAPI znajduje się w katalogu backend/. Instrukcje uruchomienia, konfiguracji klucza i połączenia z frontendem opisano w backend/README.md. Frontend korzysta ze zmiennej kompilacji VITE_CORTANA_API_URL; klucz OPENAI_API_KEY należy trzymać wyłącznie na serwerze backendu.
 
 Rozmowa jest lokalna, a głos wykorzystuje Web Speech API urządzenia, jeżeli backend nie jest skonfigurowany. Gdy API URL zostanie ustawiony, frontend wysyła wiadomości do backendu i prezentuje odpowiedzi modelu.
+
+
+## Etap 04 — eksploracja i ekwipunek
+
+Pierwsza misja wymaga odnalezienia trzech fragmentów danych w Dolinie Cytadeli. Zbliż się do błękitnego obiektu i naciśnij E. Postęp zbierania oraz stan przekaźnika zapisują się lokalnie w przeglądarce. Przycisk resetowania czyści postęp misji i zebrane fragmenty.
+
+Fragmenty danych są fikcyjnym elementem świata gry, a nie rzeczywistą technologią przechowywania wspomnień.

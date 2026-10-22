@@ -114,6 +114,28 @@ for (let i = 0; i < 130; i++) {
   scene.add(makeTree(x, z, 0.65 + Math.random() * 1.3));
 }
 
+type DataFragment = { id: string; label: string; position: THREE.Vector3; group: THREE.Group; collected: boolean };
+const fragmentSpecs = [
+  { id: "fragment-forest", label: "Archiwum lasu", position: new THREE.Vector3(-18, 0, 18) },
+  { id: "fragment-lake", label: "Echo jeziora", position: new THREE.Vector3(-78, 0, -35) },
+  { id: "fragment-citadel", label: "Sygnał Cytadeli", position: new THREE.Vector3(26, 0, -72) },
+];
+const savedFragments = new Set<string>(JSON.parse(localStorage.getItem("cortara-data-fragments") ?? "[]") as string[]);
+const dataFragments: DataFragment[] = fragmentSpecs.map((spec) => {
+  const group = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.8, 1), new THREE.MeshStandardMaterial({
+    color: "#b8f8ff", emissive: "#39dfff", emissiveIntensity: 2.5, metalness: 0.2, roughness: 0.18
+  }));
+  core.position.y = 2.6; core.scale.set(0.7, 1.5, 0.7); group.add(core);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(2.6, 0.07, 6, 32), new THREE.MeshBasicMaterial({
+    color: "#8cefff", transparent: true, opacity: 0.8
+  }));
+  ring.rotation.x = Math.PI / 2; ring.position.y = 1.2; group.add(ring);
+  group.position.copy(spec.position); group.userData.core = core; group.userData.ring = ring;
+  const collected = savedFragments.has(spec.id); group.visible = !collected; scene.add(group);
+  return { ...spec, group, collected };
+});
+
 const relay = new THREE.Group();
 const relayBase = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.4, 2.4, 8), stoneMat);
 relayBase.position.y = 1.2; relayBase.castShadow = true; relay.add(relayBase);
@@ -150,21 +172,40 @@ function showToast(text: string): void {
   toastTimer = window.setTimeout(() => toastEl.classList.remove("visible"), 2600);
 }
 function updateMission(): void {
-  progressEl.style.width = relayActivated ? "100%" : "9%";
-  missionStateEl.textContent = relayActivated ? "CEL UKOŃCZONY: PRZEKAŹNIK AKTYWNY" : "CEL: ODNAJDŹ I AKTYWUJ PRZEKAŹNIK";
+  const found = dataFragments.filter((fragment) => fragment.collected).length;
+  const total = dataFragments.length;
+  progressEl.style.width = relayActivated ? "100%" : `${Math.round((found / total) * 75)}%`;
+  missionStateEl.textContent = relayActivated ? "MISJA UKOŃCZONA · SIEĆ PRZYWRÓCONA"
+    : found < total ? `CEL: ZBIERZ FRAGMENTY DANYCH · ${found}/${total}` : "CEL: AKTYWUJ PRZEKAŹNIK";
+  const inventory = document.querySelector<HTMLElement>("#fragment-count");
+  if (inventory) inventory.textContent = `FRAGMENTY ${found}/${total}`;
   messageEl.textContent = relayActivated
-    ? "Świetna praca. Przekaźnik odpowiada, a mapa Doliny Cytadeli została zaktualizowana. To dopiero pierwszy węzeł sieci."
-    : "Witaj w Cortarze. Kopuła jest stabilna. Świecący węzeł na wschodzie to nasz pierwszy przekaźnik.";
+    ? "Świetna praca. Przekaźnik odpowiada, a pierwsza sieć Doliny Cytadeli została przywrócona."
+    : found < total ? `Zebrane fragmenty danych: ${found} z ${total}. Szukaj unoszących się błękitnych kryształów i naciśnij E w ich pobliżu.`
+    : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const nearby = dataFragments.filter((fragment) => !fragment.collected)
+    .sort((a, b) => player.position.distanceTo(a.position) - player.position.distanceTo(b.position))[0];
+  if (nearby && player.position.distanceTo(nearby.position) < 10) {
+    nearby.collected = true; nearby.group.visible = false; savedFragments.add(nearby.id);
+    localStorage.setItem("cortara-data-fragments", JSON.stringify([...savedFragments]));
+    updateMission(); showToast(`Zebrano: ${nearby.label}`); return;
+  }
   if (player.position.distanceTo(relay.position) > 16) {
-    showToast("Przekaźnik jest dalej. Podążaj za niebieskim światłem.");
-    messageEl.textContent = "Przekaźnik znajduje się na wschód od Ciebie. Podejdź bliżej, a pomogę go aktywować.";
+    showToast(nearby ? "Fragment danych jest niedaleko. Podejdź bliżej i naciśnij E." : "Cel jest dalej. Rozejrzyj się za błękitnymi fragmentami danych.");
+    messageEl.textContent = "Eksploruj dolinę i zbierz trzy fragmenty danych. Naciśnij E, gdy stoisz blisko błękitnego kryształu.";
     return;
   }
-  if (relayActivated) { messageEl.textContent = "Przekaźnik działa poprawnie. Możemy teraz zbadać kolejną strefę."; showToast("Przekaźnik działa stabilnie."); return; }
+  if (relayActivated) { messageEl.textContent = "Przekaźnik działa poprawnie. Pierwsza sieć została przywrócona."; showToast("Przekaźnik działa stabilnie."); return; }
+  const found = dataFragments.filter((fragment) => fragment.collected).length;
+  if (found < dataFragments.length) {
+    showToast(`Brakujące dane: ${found}/${dataFragments.length}. Najpierw znajdź fragmenty.`);
+    messageEl.textContent = `Przekaźnik potrzebuje trzech fragmentów danych. Masz ${found} z ${dataFragments.length}.`; return;
+  }
   relayActivated = true; localStorage.setItem("cortara-relay-activated", "true");
-  relayOrb.material = makeOrbMaterial(true); relayLight.color.set("#71ffcb"); updateMission(); showToast("Misja ukończona: przekaźnik aktywny.");
+  relayOrb.material = makeOrbMaterial(true); relayLight.color.set("#71ffcb"); updateMission();
+  showToast("Misja ukończona: sieć przekaźnika przywrócona.");
 }
 function speakCurrentMessage(): void {
   if (!("speechSynthesis" in window)) {
@@ -254,7 +295,10 @@ async function refreshBackendStatus(): Promise<void> {
 }
 function resetMission(): void {
   relayActivated = false; localStorage.removeItem("cortara-relay-activated");
-  relayOrb.material = makeOrbMaterial(false); relayLight.color.set("#42dfff"); updateMission(); showToast("Misja została zresetowana.");
+  dataFragments.forEach((fragment) => { fragment.collected = false; fragment.group.visible = true; });
+  savedFragments.clear(); localStorage.removeItem("cortara-data-fragments");
+  relayOrb.material = makeOrbMaterial(false); relayLight.color.set("#42dfff"); updateMission();
+  showToast("Misja i zebrane fragmenty zostały zresetowane.");
 }
 updateMission();
 talkButton.addEventListener("click", talk);
@@ -307,6 +351,15 @@ function animate(): void {
   player.position.z = THREE.MathUtils.clamp(player.position.z, -790, 790);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  dataFragments.forEach((fragment, index) => {
+    if (fragment.collected) return;
+    fragment.group.position.y = Math.sin(elapsed * 1.8 + index) * 0.45;
+    fragment.group.rotation.y += delta * (0.45 + index * 0.12);
+    const core = fragment.group.userData.core as THREE.Mesh;
+    const ring = fragment.group.userData.ring as THREE.Mesh;
+    ring.rotation.z += delta * 0.8;
+    core.scale.y = 1.5 + Math.sin(elapsed * 2 + index) * 0.12;
+  });
   cortanaHologram.update(performance.now() * 0.001, cortanaSpeaking);
   crystals.rotation.y += delta * 0.015; domeGrid.rotation.y += delta * 0.0015;
   water.material.opacity = 0.78 + Math.sin(performance.now() * 0.0008) * 0.05;
