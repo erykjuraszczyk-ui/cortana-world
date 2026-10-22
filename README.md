@@ -23,6 +23,8 @@ Otwórz adres wyświetlony przez Vite (zwykle http://localhost:5173).
 
 ## Co działa w prototypie
 
+- proceduralny hologram Cortany 3D z animacją unoszenia, skanowania i gestem podczas mówienia;
+- polski odczyt tekstu przez wbudowane Web Speech API przeglądarki (dostępność głosu zależy od urządzenia i przeglądarki);
 - scena 3D w Three.js z terenem i przezroczystą kopułą;
 - kamera trzecioosobowa oraz ruch postaci;
 - Cytadela Cortany, kryształy i stacja przekaźnikowa;
@@ -33,7 +35,7 @@ Otwórz adres wyświetlony przez Vite (zwykle http://localhost:5173).
 
 ## Co jest jeszcze fikcją / planem
 
-Całoplanetarna kopuła, antygrawitacyjne wyspy, kryształy pamięci i anomalie czasu są elementami fikcyjnego uniwersum. Aktualna wersja jest prototypem gry, nie pełną symulacją planety ani autonomicznym agentem AI. Rozmowa w prototypie jest lokalnym dialogiem demonstracyjnym; prawdziwy model AI wymaga backendu oraz konfiguracji dostawcy.
+Całoplanetarna kopuła, antygrawitacyjne wyspy, kryształy pamięci i anomalie czasu są elementami fikcyjnego uniwersum. Aktualna wersja jest prototypem gry, nie pełną symulacją planety ani autonomicznym agentem AI. Dialog w prototypie jest lokalny, a głos wykorzystuje Web Speech API urządzenia; nie jest to jeszcze prawdziwa rozmowa z modelem AI. Prawdziwy model AI wymaga backendu oraz konfiguracji dostawcy.
 
 ## Technologie
 

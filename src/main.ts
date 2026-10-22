@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createCortanaHologram } from "./entities/CortanaHologram";
 import "./styles.css";
 
 type MoveDirection = "forward" | "back" | "left" | "right";
@@ -11,7 +12,8 @@ const toastEl = document.querySelector<HTMLElement>("#toast");
 const talkButton = document.querySelector<HTMLButtonElement>("#talk-button");
 const resetButton = document.querySelector<HTMLButtonElement>("#reset-button");
 const touchInteract = document.querySelector<HTMLButtonElement>("#touch-interact");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const voiceButton = document.querySelector<HTMLButtonElement>("#voice-button");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -128,6 +130,12 @@ helmet.position.y = 2.15; helmet.castShadow = true; player.add(helmet);
 const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.95, 0.36), stoneMat); backpack.position.set(0, 1.25, 0.55); player.add(backpack);
 player.position.set(0, 0, 8); scene.add(player);
 
+// Proceduralny hologram przewodniczki, nie wymagający zewnętrznego modelu 3D.
+const cortanaHologram = createCortanaHologram();
+cortanaHologram.group.position.set(-5.5, 0, -2.5);
+scene.add(cortanaHologram.group);
+let cortanaSpeaking = false;
+
 const keys = new Set<string>();
 let touchMove: MoveDirection | null = null;
 let relayActivated = localStorage.getItem("cortara-relay-activated") === "true";
@@ -153,17 +161,37 @@ function interact(): void {
   relayActivated = true; localStorage.setItem("cortara-relay-activated", "true");
   relayOrb.material = makeOrbMaterial(true); relayLight.color.set("#71ffcb"); updateMission(); showToast("Misja ukończona: przekaźnik aktywny.");
 }
+function speakCurrentMessage(): void {
+  if (!("speechSynthesis" in window)) {
+    showToast("Ta przeglądarka nie obsługuje odczytu głosowego.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(messageEl.textContent ?? "Witaj w Cortarze.");
+  utterance.lang = "pl-PL";
+  utterance.rate = 0.94;
+  utterance.pitch = 1.06;
+  const polishVoice = window.speechSynthesis.getVoices().find((voice) => voice.lang.toLowerCase().startsWith("pl"));
+  if (polishVoice) utterance.voice = polishVoice;
+  utterance.onstart = () => { cortanaSpeaking = true; };
+  utterance.onend = () => { cortanaSpeaking = false; };
+  utterance.onerror = () => { cortanaSpeaking = false; showToast("Nie udało się odtworzyć głosu. Sprawdź głos polski w ustawieniach urządzenia."); };
+  window.speechSynthesis.speak(utterance);
+}
 function talk(): void {
   messageEl.textContent = relayActivated
     ? "Dzięki Tobie pierwszy węzeł znów działa. W tej wersji jestem demonstracyjną przewodniczką; w kolejnym etapie podłączymy bezpieczny backend prawdziwej AI."
-    : "Znam to miejsce z zapisów archiwum. Podejdź do niebieskiego przekaźnika i naciśnij E. Wtedy sprawdzimy, czy sieć kopuły odpowie.";
+    : "Witaj w Cortarze. Jestem Cortana, Twoja przewodniczka. Hologram działa lokalnie. Podejdź do niebieskiego przekaźnika i naciśnij E, aby przywrócić pierwszy węzeł kopuły.";
+  speakCurrentMessage();
 }
 function resetMission(): void {
   relayActivated = false; localStorage.removeItem("cortara-relay-activated");
   relayOrb.material = makeOrbMaterial(false); relayLight.color.set("#42dfff"); updateMission(); showToast("Misja została zresetowana.");
 }
 updateMission();
-talkButton.addEventListener("click", talk); resetButton.addEventListener("click", resetMission); touchInteract.addEventListener("click", interact);
+talkButton.addEventListener("click", talk);
+voiceButton.addEventListener("click", speakCurrentMessage);
+resetButton.addEventListener("click", resetMission); touchInteract.addEventListener("click", interact);
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift", "e"].includes(key)) event.preventDefault();
@@ -209,6 +237,7 @@ function animate(): void {
   player.position.z = THREE.MathUtils.clamp(player.position.z, -790, 790);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  cortanaHologram.update(performance.now() * 0.001, cortanaSpeaking);
   crystals.rotation.y += delta * 0.015; domeGrid.rotation.y += delta * 0.0015;
   water.material.opacity = 0.78 + Math.sin(performance.now() * 0.0008) * 0.05;
   desiredCamera.copy(player.position).add(new THREE.Vector3(Math.sin(cameraYaw) * 9 * Math.cos(cameraPitch), 4 + Math.sin(cameraPitch) * 9, Math.cos(cameraYaw) * 9 * Math.cos(cameraPitch)));
