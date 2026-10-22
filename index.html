@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07131f" />
+    <meta name="description" content="Świat Cortany — eksploracyjna gra 3D na planecie pod przezroczystą kopułą." />
+    <title>Świat Cortany — Planeta pod Kopułą</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="world" aria-label="Interaktywny świat 3D"></canvas>
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">C</span><div><strong>CORTANA WORLD</strong><small>PLANETA POD KOPUŁĄ · 02.0</small></div></div>
+        <div class="system-status"><span class="pulse"></span><span>ŚRODOWISKO STABILNE</span></div>
+      </header>
+      <main class="hud">
+        <section class="mission-card glass">
+          <div class="eyebrow">AKTUALNA MISJA · 01</div>
+          <h1>Obudź przekaźnik</h1>
+          <p>Dotrzyj do niebieskiego węzła i aktywuj pierwszy przekaźnik sieci kopuły.</p>
+          <div class="progress"><span id="mission-progress"></span></div>
+          <small id="mission-state">CEL: ODNAJDŹ PRZEKAŹNIK</small>
+        </section>
+        <section class="cortana-card glass">
+          <div class="avatar-ring"><div class="avatar-core">C</div><span class="ring r1"></span><span class="ring r2"></span></div>
+          <div class="cortana-copy"><div class="eyebrow">PRZEWODNICZKA AI</div><h2>Cortana</h2><p id="cortana-message">Witaj w Cortarze. Kopuła jest stabilna. Wskażę Ci pierwszy przekaźnik.</p></div>
+          <button id="talk-button" class="primary-button" type="button">Porozmawiaj <span>↗</span></button>
+        </section>
+        <section class="location-card glass"><span class="location-icon">⌖</span><div><small>LOKALIZACJA</small><strong>Dolina Cytadeli</strong></div><div class="coordinates" id="coordinates">X 000 · Z 000</div></section>
+      </main>
+      <footer class="bottom-hud">
+        <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>RUCH</span><kbd>SHIFT</kbd><span>BIEG</span><kbd>E</kbd><span>INTERAKCJA</span></div>
+        <button id="reset-button" class="icon-button" type="button" title="Zresetuj misję" aria-label="Zresetuj misję">↺</button>
+      </footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <div id="touch-controls" class="touch-controls" aria-label="Sterowanie dotykowe">
+        <div class="dpad"><button data-move="forward" aria-label="Do przodu">▲</button><div><button data-move="left" aria-label="W lewo">◀</button><button data-move="back" aria-label="Do tyłu">▼</button><button data-move="right" aria-label="W prawo">▶</button></div></div>
+        <button id="touch-interact" class="touch-interact">INTERAKCJA</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
