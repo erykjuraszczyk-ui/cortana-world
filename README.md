@@ -50,3 +50,10 @@ Repozytorium zawiera workflow w `.github/workflows/deploy-pages.yml`. W ustawien
 ## Zasady bezpieczeństwa
 
 Nie umieszczaj kluczy API w kodzie frontendu ani w publicznym repozytorium. Sekrety dla przyszłego backendu przechowuj w zmiennych środowiskowych i GitHub Secrets. Zmiany generowane automatycznie powinny przejść testy przed wdrożeniem.
+
+
+## Backend AI (etap 03)
+
+Backend FastAPI znajduje się w katalogu backend/. Instrukcje uruchomienia, konfiguracji klucza i połączenia z frontendem opisano w backend/README.md. Frontend korzysta ze zmiennej kompilacji VITE_CORTANA_API_URL; klucz OPENAI_API_KEY należy trzymać wyłącznie na serwerze backendu.
+
+Rozmowa jest lokalna, a głos wykorzystuje Web Speech API urządzenia, jeżeli backend nie jest skonfigurowany. Gdy API URL zostanie ustawiony, frontend wysyła wiadomości do backendu i prezentuje odpowiedzi modelu.

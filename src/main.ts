@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { createCortanaHologram } from "./entities/CortanaHologram";
+import { checkCortanaApiHealth, isCortanaApiConfigured, sendCortanaMessage, type ChatTurn, type CortanaWorldState } from "./services/CortanaApi";
 import "./styles.css";
 
 type MoveDirection = "forward" | "back" | "left" | "right";
@@ -13,7 +14,11 @@ const talkButton = document.querySelector<HTMLButtonElement>("#talk-button");
 const resetButton = document.querySelector<HTMLButtonElement>("#reset-button");
 const touchInteract = document.querySelector<HTMLButtonElement>("#touch-interact");
 const voiceButton = document.querySelector<HTMLButtonElement>("#voice-button");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const chatForm = document.querySelector<HTMLFormElement>("#chat-form");
+const chatInput = document.querySelector<HTMLInputElement>("#chat-input");
+const sendButton = document.querySelector<HTMLButtonElement>("#send-button");
+const statusLabel = document.querySelector<HTMLElement>("#system-status-label");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -178,11 +183,74 @@ function speakCurrentMessage(): void {
   utterance.onerror = () => { cortanaSpeaking = false; showToast("Nie udało się odtworzyć głosu. Sprawdź głos polski w ustawieniach urządzenia."); };
   window.speechSynthesis.speak(utterance);
 }
+const chatHistory: ChatTurn[] = [];
+function getWorldState(): CortanaWorldState {
+  return {
+    biome: "Zielone Serce",
+    location: "Dolina Cytadeli",
+    relay_activated: relayActivated,
+    x: Math.round(player.position.x),
+    z: Math.round(player.position.z),
+  };
+}
+function demoReply(message: string): string {
+  const text = message.toLocaleLowerCase("pl-PL");
+  if (text.includes("przekaźnik") || text.includes("przekaznik") || text.includes("misj")) {
+    return relayActivated
+      ? "Pierwszy przekaźnik jest aktywny. Możesz eksplorować Dolinę Cytadeli; kolejne obszary dodamy w dalszych etapach."
+      : "Niebieski węzeł na wschodzie to nasz cel. Podejdź do niego i naciśnij E, aby aktywować pierwszy przekaźnik.";
+  }
+  if (text.includes("kopuł") || text.includes("kopul")) {
+    return "Kopuła jest przezroczystą powłoką ochronną w fikcyjnym świecie Cortary. W tym prototypie jej stan jest częścią symulacji, a nie rzeczywistym modelem fizycznym.";
+  }
+  if (text.includes("gdzie") || text.includes("lokaliz")) {
+    const state = getWorldState();
+    return `Jesteś w okolicy ${state.location}. Współrzędne w grze: X ${state.x}, Z ${state.z}.`;
+  }
+  return "Jestem teraz w trybie demonstracyjnym. Interfejs i hologram działają, ale prawdziwa rozmowa AI wymaga wdrożonego backendu FastAPI i konfiguracji klucza po stronie serwera.";
+}
+async function submitChat(event: SubmitEvent): Promise<void> {
+  event.preventDefault();
+  const message = chatInput.value.trim();
+  if (!message || sendButton.disabled) return;
+  chatInput.value = "";
+  sendButton.disabled = true;
+  messageEl.textContent = "Analizuję Twoją wiadomość…";
+  try {
+    if (!isCortanaApiConfigured()) {
+      const answer = demoReply(message);
+      messageEl.textContent = answer;
+      chatHistory.push({ role: "user", content: message }, { role: "assistant", content: answer });
+      showToast("Tryb demonstracyjny — backend AI nie jest jeszcze podłączony.");
+      return;
+    }
+    const result = await sendCortanaMessage({
+      message,
+      history: chatHistory.slice(-10),
+      world_state: getWorldState(),
+    });
+    messageEl.textContent = result.message;
+    chatHistory.push({ role: "user", content: message }, { role: "assistant", content: result.message });
+    if (chatHistory.length > 12) chatHistory.splice(0, chatHistory.length - 12);
+    if (result.mode === "demo") showToast("Odpowiedź demonstracyjna.");
+  } catch (error) {
+    messageEl.textContent = demoReply(message);
+    showToast(error instanceof Error ? `AI offline: ${error.message}` : "AI offline — używam trybu demonstracyjnego.");
+  } finally {
+    sendButton.disabled = false;
+    chatInput.focus();
+  }
+}
 function talk(): void {
-  messageEl.textContent = relayActivated
-    ? "Dzięki Tobie pierwszy węzeł znów działa. W tej wersji jestem demonstracyjną przewodniczką; w kolejnym etapie podłączymy bezpieczny backend prawdziwej AI."
-    : "Witaj w Cortarze. Jestem Cortana, Twoja przewodniczka. Hologram działa lokalnie. Podejdź do niebieskiego przekaźnika i naciśnij E, aby przywrócić pierwszy węzeł kopuły.";
-  speakCurrentMessage();
+  messageEl.textContent = "Jestem Cortana, Twoja przewodniczka. Napisz pytanie poniżej. Gdy backend AI nie jest skonfigurowany, odpowiadam w trybie demonstracyjnym.";
+  chatInput.focus();
+}
+async function refreshBackendStatus(): Promise<void> {
+  statusLabel.textContent = "TRYB DEMO";
+  if (!isCortanaApiConfigured()) return;
+  statusLabel.textContent = "SPRAWDZAM AI…";
+  const ready = await checkCortanaApiHealth();
+  statusLabel.textContent = ready ? "CORTANA AI ONLINE" : "AI NIEDOSTĘPNE";
 }
 function resetMission(): void {
   relayActivated = false; localStorage.removeItem("cortara-relay-activated");
@@ -191,6 +259,8 @@ function resetMission(): void {
 updateMission();
 talkButton.addEventListener("click", talk);
 voiceButton.addEventListener("click", speakCurrentMessage);
+chatForm.addEventListener("submit", (event) => { void submitChat(event); });
+void refreshBackendStatus();
 resetButton.addEventListener("click", resetMission); touchInteract.addEventListener("click", interact);
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();

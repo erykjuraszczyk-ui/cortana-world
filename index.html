@@ -12,7 +12,7 @@
       <canvas id="world" aria-label="Interaktywny świat 3D"></canvas>
       <header class="topbar">
         <div class="brand"><span class="brand-mark">C</span><div><strong>CORTANA WORLD</strong><small>PLANETA POD KOPUŁĄ · 02.0</small></div></div>
-        <div class="system-status"><span class="pulse"></span><span>ŚRODOWISKO STABILNE</span></div>
+        <div class="system-status"><span class="pulse"></span><span id="system-status-label">TRYB DEMO</span></div>
       </header>
       <main class="hud">
         <section class="mission-card glass">
@@ -27,6 +27,11 @@
           <div class="cortana-copy"><div class="eyebrow">PRZEWODNICZKA AI</div><h2>Cortana</h2><p id="cortana-message">Witaj w Cortarze. Kopuła jest stabilna. Wskażę Ci pierwszy przekaźnik.</p></div>
           <button id="talk-button" class="primary-button" type="button">Porozmawiaj <span>↗</span></button>
           <button id="voice-button" class="secondary-button" type="button">Odtwórz głos po polsku <span>♫</span></button>
+          <form id="chat-form" class="chat-form">
+            <label class="sr-only" for="chat-input">Wiadomość do Cortany</label>
+            <input id="chat-input" name="message" type="text" maxlength="1200" autocomplete="off" placeholder="Zapytaj Cortanę…" />
+            <button id="send-button" type="submit" aria-label="Wyślij wiadomość">➤</button>
+          </form>
         </section>
         <section class="location-card glass"><span class="location-icon">⌖</span><div><small>LOKALIZACJA</small><strong>Dolina Cytadeli</strong></div><div class="coordinates" id="coordinates">X 000 · Z 000</div></section>
       </main>
