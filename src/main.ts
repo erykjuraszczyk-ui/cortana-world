@@ -18,7 +18,15 @@ const chatForm = document.querySelector<HTMLFormElement>("#chat-form");
 const chatInput = document.querySelector<HTMLInputElement>("#chat-input");
 const sendButton = document.querySelector<HTMLButtonElement>("#send-button");
 const statusLabel = document.querySelector<HTMLElement>("#system-status-label");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const mapToggle = document.querySelector<HTMLButtonElement>("#map-toggle");
+const mapPanel = document.querySelector<HTMLElement>("#map-panel");
+const mapClose = document.querySelector<HTMLButtonElement>("#map-close");
+const mapCanvas = document.querySelector<HTMLCanvasElement>("#map-canvas");
+const mapLocationsEl = document.querySelector<HTMLElement>("#map-locations");
+const mapCountEl = document.querySelector<HTMLElement>("#map-count");
+const locationNameEl = document.querySelector<HTMLElement>("#location-name");
+const locationBiomeEl = document.querySelector<HTMLElement>("#location-biome");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -163,6 +171,195 @@ cortanaHologram.group.position.set(-5.5, 0, -2.5);
 scene.add(cortanaHologram.group);
 let cortanaSpeaking = false;
 
+type WorldLocation = {
+  id: string;
+  name: string;
+  description: string;
+  area: string;
+  x: number;
+  z: number;
+  radius: number;
+  discovered: boolean;
+};
+const locationSpecs = [
+  { id: "valley", name: "Dolina Cytadeli", description: "Bezpieczny punkt startowy pod przezroczystą kopułą.", area: "Zielone Serce", x: 0, z: 8, radius: 40, discoveredByDefault: true },
+  { id: "crystal-clearing", name: "Polana Kryształów", description: "Pole świecących kryształów wokół pradawnego szlaku.", area: "Zielone Serce", x: 0, z: -8, radius: 23 },
+  { id: "forest-archive", name: "Archiwum Lasu", description: "Fragmenty danych ukryte wśród drzew.", area: "Zielone Serce", x: -18, z: 18, radius: 18 },
+  { id: "relay", name: "Przekaźnik Kopuły", description: "Węzeł energetyczny misji wprowadzającej.", area: "Dolina Cytadeli", x: 32, z: 30, radius: 23 },
+  { id: "citadel-ruins", name: "Ruiny Cytadeli", description: "Stare wieże i zapisane w kamieniu ślady cywilizacji.", area: "Dolina Cytadeli", x: 0, z: -52, radius: 24 },
+  { id: "data-echo", name: "Echo Archiwum", description: "Uszkodzony zapis ekspedycji, który można odzyskać.", area: "Strefa Zapisów", x: -78, z: -35, radius: 19 },
+  { id: "lake", name: "Echo Jeziora", description: "Spokojny akwen i naturalny punkt orientacyjny.", area: "Brzeg Jeziora", x: -95, z: -105, radius: 30 },
+  { id: "western-grove", name: "Zachodni Gaj", description: "Gęsty fragment leśnego ekosystemu.", area: "Zielone Serce", x: -138, z: 44, radius: 28 },
+  { id: "eastern-ridge", name: "Wschodni Grzbiet", description: "Wyniesiony szlak z widokiem na kopułę.", area: "Zielone Serce", x: 138, z: 78, radius: 28 },
+];
+function loadStringSet(storageKey: string): Set<string> {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(storageKey) ?? "[]");
+    return new Set(Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+const knownLocations = loadStringSet("cortara-discovered-locations");
+locationSpecs.forEach((spec) => {
+  if ("discoveredByDefault" in spec && spec.discoveredByDefault) knownLocations.add(spec.id);
+});
+const worldLocations: WorldLocation[] = locationSpecs.map((spec) => ({
+  id: spec.id,
+  name: spec.name,
+  description: spec.description,
+  area: spec.area,
+  x: spec.x,
+  z: spec.z,
+  radius: spec.radius,
+  discovered: knownLocations.has(spec.id),
+}));
+let mapOpen = false;
+let lastMapDraw = 0;
+let lastLocationRefresh = 0;
+
+function renderMap(): void {
+  const context = mapCanvas.getContext("2d");
+  if (!context) return;
+  const width = mapCanvas.width;
+  const height = mapCanvas.height;
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#06131e";
+  context.fillRect(0, 0, width, height);
+  const cx = width / 2;
+  const cy = height / 2;
+  const scale = (Math.min(width, height) - 66) / 360;
+  const px = (x: number) => cx + x * scale;
+  const py = (z: number) => cy + z * scale;
+
+  context.strokeStyle = "rgba(102, 213, 245, 0.12)";
+  context.lineWidth = 1;
+  for (let step = -160; step <= 160; step += 40) {
+    context.beginPath(); context.moveTo(px(step), py(-180)); context.lineTo(px(step), py(180)); context.stroke();
+    context.beginPath(); context.moveTo(px(-180), py(step)); context.lineTo(px(180), py(step)); context.stroke();
+  }
+  context.strokeStyle = "rgba(95, 223, 255, 0.38)";
+  context.lineWidth = 2;
+  context.beginPath(); context.arc(cx, cy, 180 * scale, 0, Math.PI * 2); context.stroke();
+
+  // The lake is represented schematically; this is a game map, not a geographic survey.
+  context.fillStyle = "rgba(36, 143, 181, 0.32)";
+  context.strokeStyle = "rgba(83, 209, 240, 0.42)";
+  context.beginPath();
+  context.ellipse(px(-95), py(-105), 92 * scale, 58 * scale, -0.35, 0, Math.PI * 2);
+  context.fill(); context.stroke();
+
+  // Dotted paths only suggest navigation; they do not imply roads have been built.
+  context.setLineDash([5, 7]);
+  context.strokeStyle = "rgba(118, 230, 255, 0.22)";
+  worldLocations.filter((location) => location.discovered).forEach((location) => {
+    if (location.id === "valley") return;
+    context.beginPath(); context.moveTo(px(0), py(8)); context.lineTo(px(location.x), py(location.z)); context.stroke();
+  });
+  context.setLineDash([]);
+
+  worldLocations.forEach((location) => {
+    const x = px(location.x), y = py(location.z);
+    context.beginPath(); context.arc(x, y, location.discovered ? 7 : 6, 0, Math.PI * 2);
+    context.fillStyle = location.discovered ? "#73e8ff" : "#294c5d";
+    context.fill();
+    context.strokeStyle = location.discovered ? "#d4fbff" : "#567e8f";
+    context.lineWidth = 2; context.stroke();
+    context.fillStyle = location.discovered ? "#e5fbff" : "#8daab8";
+    context.font = "bold 15px Inter, sans-serif";
+    context.textAlign = "center"; context.textBaseline = "middle";
+    context.fillText(location.discovered ? "•" : "?", x, y + 0.5);
+    if (location.discovered) {
+      context.font = "12px Inter, sans-serif";
+      context.textAlign = "left";
+      context.fillStyle = "rgba(225, 248, 255, 0.94)";
+      context.fillText(location.name, x + 11, y - 11);
+    }
+  });
+
+  // Player marker.
+  const playerX = px(player.position.x);
+  const playerY = py(player.position.z);
+  context.save();
+  context.translate(playerX, playerY);
+  context.fillStyle = "#ffe29a";
+  context.strokeStyle = "#fff6d5";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(0, -11); context.lineTo(8, 8); context.lineTo(0, 4); context.lineTo(-8, 8);
+  context.closePath(); context.fill(); context.stroke();
+  context.restore();
+
+  context.fillStyle = "#9bc2d3";
+  context.font = "11px Inter, sans-serif";
+  context.textAlign = "left"; context.textBaseline = "top";
+  context.fillText("MAPA REGIONAL · 360 × 360 m", 14, 12);
+  context.textAlign = "right";
+  context.fillText("N ↑", width - 14, 12);
+}
+
+function refreshMapList(): void {
+  mapCountEl.textContent = "ODKRYTE LOKACJE: " + worldLocations.filter((location) => location.discovered).length + "/" + worldLocations.length;
+  mapLocationsEl.replaceChildren();
+  const discovered = worldLocations.filter((location) => location.discovered);
+  discovered.forEach((location) => {
+    const item = document.createElement("div");
+    item.className = "map-location-item";
+    const title = document.createElement("strong");
+    title.textContent = location.name;
+    const detail = document.createElement("small");
+    detail.textContent = location.area + " · " + location.description;
+    item.append(title, detail);
+    mapLocationsEl.append(item);
+  });
+  const remaining = worldLocations.length - discovered.length;
+  if (remaining > 0) {
+    const note = document.createElement("div");
+    note.className = "map-unknown-note";
+    note.textContent = "Nieodkryte punkty: " + remaining + ". Zbliż się do znaczników „?” na mapie, aby poznać ich nazwy.";
+    mapLocationsEl.append(note);
+  }
+}
+
+function setMapOpen(open: boolean): void {
+  mapOpen = open;
+  mapPanel.hidden = !open;
+  mapToggle.setAttribute("aria-expanded", String(open));
+  mapToggle.textContent = open ? "ZAMKNIJ MAPĘ [M]" : "MAPA ŚWIATA [M]";
+  if (open) {
+    renderMap();
+    refreshMapList();
+  }
+}
+function updateLocationDiscovery(): void {
+  let changed = false;
+  for (const location of worldLocations) {
+    if (location.discovered) continue;
+    const dx = player.position.x - location.x;
+    const dz = player.position.z - location.z;
+    if (Math.sqrt(dx * dx + dz * dz) <= location.radius) {
+      location.discovered = true;
+      knownLocations.add(location.id);
+      changed = true;
+      showToast("Odkryto lokację: " + location.name);
+    }
+  }
+  if (changed) {
+    localStorage.setItem("cortara-discovered-locations", JSON.stringify([...knownLocations]));
+    refreshMapList();
+    renderMap();
+  }
+  const near = worldLocations
+    .map((location) => ({
+      location,
+      distance: Math.hypot(player.position.x - location.x, player.position.z - location.z),
+    }))
+    .filter((entry) => entry.location.discovered && entry.distance <= entry.location.radius + 18)
+    .sort((a, b) => a.distance - b.distance)[0];
+  locationNameEl.textContent = near ? near.location.name : "Niezbadana okolica";
+  locationBiomeEl.textContent = near ? near.location.area.toLocaleUpperCase("pl-PL") : "ZIELONE SERCE";
+}
+
 const keys = new Set<string>();
 let touchMove: MoveDirection | null = null;
 let relayActivated = localStorage.getItem("cortara-relay-activated") === "true";
@@ -301,15 +498,31 @@ function resetMission(): void {
   showToast("Misja i zebrane fragmenty zostały zresetowane.");
 }
 updateMission();
+updateLocationDiscovery();
+refreshMapList();
 talkButton.addEventListener("click", talk);
 voiceButton.addEventListener("click", speakCurrentMessage);
+mapToggle.addEventListener("click", () => setMapOpen(!mapOpen));
+mapClose.addEventListener("click", () => setMapOpen(false));
 chatForm.addEventListener("submit", (event) => { void submitChat(event); });
 void refreshBackendStatus();
 resetButton.addEventListener("click", resetMission); touchInteract.addEventListener("click", interact);
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
+  const target = event.target;
+  if (target instanceof HTMLElement && (target.matches("input, textarea, select") || target.isContentEditable)) return;
+  if (key === "m" && !event.repeat) {
+    event.preventDefault();
+    setMapOpen(!mapOpen);
+    return;
+  }
+  if (key === "escape" && mapOpen) {
+    setMapOpen(false);
+    return;
+  }
   if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift", "e"].includes(key)) event.preventDefault();
-  keys.add(key); if (key === "e" && !event.repeat) interact();
+  keys.add(key);
+  if (key === "e" && !event.repeat) interact();
 });
 window.addEventListener("keyup", (event) => keys.delete(event.key.toLowerCase()));
 window.addEventListener("blur", () => keys.clear());
@@ -368,6 +581,11 @@ function animate(): void {
   camera.position.lerp(desiredCamera, 1 - Math.exp(-5 * delta));
   lookTarget.copy(player.position).add(new THREE.Vector3(0, 1.4, 0)); camera.lookAt(lookTarget);
   coordinatesEl.textContent = `X ${Math.round(player.position.x).toString().padStart(3, "0")} · Z ${Math.round(player.position.z).toString().padStart(3, "0")}`;
+  if (elapsed - lastLocationRefresh >= 0.25) {
+    lastLocationRefresh = elapsed;
+    updateLocationDiscovery();
+    if (mapOpen && performance.now() - lastMapDraw >= 180) { lastMapDraw = performance.now(); renderMap(); }
+  }
   renderer.render(scene, camera);
 }
 animate();

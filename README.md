@@ -65,3 +65,12 @@ Rozmowa jest lokalna, a głos wykorzystuje Web Speech API urządzenia, jeżeli b
 Pierwsza misja wymaga odnalezienia trzech fragmentów danych w Dolinie Cytadeli. Zbliż się do błękitnego obiektu i naciśnij E. Postęp zbierania oraz stan przekaźnika zapisują się lokalnie w przeglądarce. Przycisk resetowania czyści postęp misji i zebrane fragmenty.
 
 Fragmenty danych są fikcyjnym elementem świata gry, a nie rzeczywistą technologią przechowywania wspomnień.
+
+
+## Etap 05 — mapa regionalna i odkrywanie lokacji
+
+- Mapa otwiera się przyciskiem **MAPA ŚWIATA** albo klawiszem **M**; zamkniesz ją klawiszem **Escape** lub przyciskiem ×.
+- Złoty znacznik pokazuje gracza, błękitne punkty oznaczają odkryte lokacje, a znaki zapytania miejsca nieznane.
+- Odkrycia są zapisywane w localStorage. Zbliż się do punktu zainteresowania, aby poznać jego nazwę i opis.
+- Mapa jest schematyczna i pokazuje regionalny obszar gry, nie dokładną mapę geograficzną. Nazwy odległych punktów nie oznaczają jeszcze, że wszystkie biomy mają własne, szczegółowo zbudowane środowiska 3D.
+- Sterowanie klawiaturą nie reaguje na WASD, gdy kursor znajduje się w polu wpisywania wiadomości.

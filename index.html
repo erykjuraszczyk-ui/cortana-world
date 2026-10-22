@@ -34,8 +34,17 @@
             <button id="send-button" type="submit" aria-label="Wyślij wiadomość">➤</button>
           </form>
         </section>
-        <section class="location-card glass"><span class="location-icon">⌖</span><div><small>LOKALIZACJA</small><strong>Dolina Cytadeli</strong></div><div class="coordinates" id="coordinates">X 000 · Z 000</div></section>
+        <section class="location-card glass"><span class="location-icon">⌖</span><div class="location-copy"><small>LOKALIZACJA</small><strong id="location-name">Dolina Cytadeli</strong><small class="location-biome" id="location-biome">ZIELONE SERCE</small></div><div class="coordinates" id="coordinates">X 000 · Z 000</div><button id="map-toggle" class="map-toggle" type="button" aria-expanded="false" aria-controls="map-panel">MAPA ŚWIATA [M]</button></section>
       </main>
+      <section id="map-panel" class="map-panel glass" hidden aria-label="Mapa świata Cortany">
+        <div class="map-panel-header">
+          <div><div class="eyebrow">NAWIGACJA</div><h2>Mapa Doliny</h2><small id="map-count">ODKRYTE LOKACJE: 1/9</small></div>
+          <button id="map-close" class="map-close" type="button" aria-label="Zamknij mapę">×</button>
+        </div>
+        <canvas id="map-canvas" width="640" height="520" role="img" aria-label="Mapa regionalna z pozycją gracza, jeziorem i punktami zainteresowania"></canvas>
+        <div class="map-legend"><span><i class="legend-player"></i> TY</span><span><i class="legend-known"></i> ODKRYTE</span><span><i class="legend-unknown"></i> NIEZNANE</span></div>
+        <div id="map-locations" class="map-locations" aria-live="polite"></div>
+      </section>
       <footer class="bottom-hud">
         <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>RUCH</span><kbd>SHIFT</kbd><span>BIEG</span><kbd>E</kbd><span>INTERAKCJA</span></div>
         <button id="reset-button" class="icon-button" type="button" title="Zresetuj misję" aria-label="Zresetuj misję">↺</button>
