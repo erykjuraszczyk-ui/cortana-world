@@ -337,6 +337,7 @@ const desiredCamera = new THREE.Vector3(), lookTarget = new THREE.Vector3();
 function animate(): void {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
+  const elapsed = performance.now() * 0.001;
   const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
   const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
   const input = new THREE.Vector3();
