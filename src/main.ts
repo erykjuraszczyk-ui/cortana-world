@@ -28,7 +28,9 @@ const locationNameEl = document.querySelector<HTMLElement>("#location-name");
 const locationBiomeEl = document.querySelector<HTMLElement>("#location-biome");
 const timeToggle = document.querySelector<HTMLButtonElement>("#time-toggle");
 const timeLabel = document.querySelector<HTMLElement>("#time-label");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const audioToggle = document.querySelector<HTMLButtonElement>("#audio-toggle");
+const audioLabel = document.querySelector<HTMLElement>("#audio-label");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel || !audioToggle || !audioLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -97,11 +99,78 @@ function updateDayNight(delta: number): void {
   const angle = dayCyclePhase * Math.PI * 2;
   sun.position.set(Math.cos(angle) * 220, 25 + Math.max(0, solar) * 180, Math.sin(angle) * 160);
   starsMaterial.opacity = THREE.MathUtils.clamp(night * 1.12, 0, 0.92);
+  updateAmbientForPhase(night);
   timeLabel.textContent = night > 0.72 ? "NOC" : daylight < 0.38 ? (solar > 0 ? "ŚWIT" : "ZMIERZCH") : "DZIEŃ";
   timeToggle.textContent = dayCyclePaused ? "WZNÓW CYKL" : "PAUZA CYKLU";
   timeToggle.setAttribute("aria-pressed", String(dayCyclePaused));
 }
 timeToggle.addEventListener("click", () => { dayCyclePaused = !dayCyclePaused; updateDayNight(0); });
+
+let audioContext: AudioContext | null = null;
+let ambientGain: GainNode | null = null;
+let ambientOscillator: OscillatorNode | null = null;
+let windOscillator: OscillatorNode | null = null;
+let audioEnabled = false;
+let lastDiscoveryChime = 0;
+function updateAudioUi(): void {
+  audioToggle.textContent = audioEnabled ? "WYŁĄCZ DŹWIĘK" : "WŁĄCZ DŹWIĘK";
+  audioToggle.setAttribute("aria-pressed", String(audioEnabled));
+  audioLabel.textContent = audioEnabled ? "AMBIENT AKTYWNY" : "DŹWIĘK WYŁĄCZONY";
+}
+function startAmbientAudio(): void {
+  if (audioContext) {
+    audioEnabled = true;
+    if (ambientGain) ambientGain.gain.setTargetAtTime(0.035, audioContext.currentTime, 0.6);
+    if (audioContext.state === "suspended") void audioContext.resume();
+    updateAudioUi();
+    return;
+  }
+  if (!window.AudioContext) { showToast("Ta przeglądarka nie obsługuje Web Audio."); return; }
+  audioContext = new window.AudioContext();
+  const ctx = audioContext;
+  const master = ctx.createGain(); master.gain.value = 0.035; master.connect(ctx.destination); ambientGain = master;
+  const lowpass = ctx.createBiquadFilter(); lowpass.type = "lowpass"; lowpass.frequency.value = 360; lowpass.Q.value = 0.45; lowpass.connect(master);
+  ambientOscillator = ctx.createOscillator(); ambientOscillator.type = "sine"; ambientOscillator.frequency.value = 68;
+  const droneGain = ctx.createGain(); droneGain.gain.value = 0.24;
+  ambientOscillator.connect(droneGain); droneGain.connect(lowpass); ambientOscillator.start();
+  windOscillator = ctx.createOscillator(); windOscillator.type = "triangle"; windOscillator.frequency.value = 0.13;
+  const windDepth = ctx.createGain(); windDepth.gain.value = 35;
+  const windFilter = ctx.createBiquadFilter(); windFilter.type = "lowpass"; windFilter.frequency.value = 260;
+  windOscillator.connect(windDepth); windDepth.connect(windFilter.frequency); windFilter.connect(master); windOscillator.start();
+  audioEnabled = true;
+  updateAudioUi();
+}
+function stopAmbientAudio(): void {
+  audioEnabled = false;
+  if (audioContext && ambientGain) ambientGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.18);
+  updateAudioUi();
+}
+function playDiscoveryChime(): void {
+  if (!audioEnabled || !audioContext || audioContext.state !== "running") return;
+  const now = audioContext.currentTime;
+  if (now - lastDiscoveryChime < 0.7) return;
+  lastDiscoveryChime = now;
+  [523.25, 659.25, 783.99].forEach((frequency, index) => {
+    const oscillator = audioContext!.createOscillator();
+    const gain = audioContext!.createGain();
+    oscillator.type = "sine";
+    const start = now + index * 0.08;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.1, start + 0.025);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.42);
+    oscillator.connect(gain); gain.connect(audioContext!.destination);
+    oscillator.start(start); oscillator.stop(start + 0.45);
+  });
+}
+function updateAmbientForPhase(night: number): void {
+  if (!audioEnabled || !audioContext || !ambientOscillator) return;
+  ambientOscillator.frequency.setTargetAtTime(62 + night * 22, audioContext.currentTime, 1.2);
+}
+audioToggle.addEventListener("click", () => {
+  if (audioEnabled) stopAmbientAudio();
+  else startAmbientAudio();
+});
 
 const groundGeometry = new THREE.PlaneGeometry(1800, 1800, 90, 90);
 groundGeometry.rotateX(-Math.PI / 2);
@@ -489,6 +558,7 @@ function updateLocationDiscovery(): void {
       knownLocations.add(location.id);
       changed = true;
       showToast("Odkryto lokację: " + location.name);
+      playDiscoveryChime();
     }
   }
   if (changed) {

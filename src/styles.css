@@ -53,3 +53,6 @@
 
 /* Etap 08 — kontrola cyklu dobowego */
 .system-status{gap:8px;flex-wrap:wrap}.time-divider{opacity:.4}.system-status #time-label{font-size:9px;letter-spacing:.13em;color:#b8f1ff;min-width:36px}.time-toggle{padding:7px 9px;border:1px solid #77dcff42;border-radius:8px;background:#061a2a88;color:#c9f5ff;font:600 8px Inter,sans-serif;letter-spacing:.07em;cursor:pointer}.time-toggle:hover{background:#17405a}.time-toggle[aria-pressed="true"]{border-color:#e5bc75;color:#ffe5b4}@media(max-width:600px){.system-status{gap:5px}.time-toggle{padding:6px 7px;font-size:7px}.system-status #time-label{font-size:8px}}
+
+/* Etap 09 — dźwięk środowiskowy generowany lokalnie */
+.audio-label{font-size:7px;letter-spacing:.08em;color:#9db9c9}.audio-toggle[aria-pressed="true"]{border-color:#70e2b0;color:#b9ffe0}@media(max-width:680px){.audio-label{display:none}.audio-toggle{max-width:100px}}

@@ -105,3 +105,11 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Pasek górny pokazuje fazę: dzień, świt, zmierzch lub noc.
 - Przycisk „PAUZA CYKLU / WZNÓW CYKL” pozwala zatrzymać i wznowić zmianę czasu.
 - Cykl jest symulacją gry; nie synchronizuje się z rzeczywistą porą dnia ani astronomią.
+
+
+## Etap 09 — dźwięk środowiskowy
+
+- Dodano opcjonalny ambient syntetyzowany lokalnie przez Web Audio API — bez plików audio, pobierania assetów ani zewnętrznych usług.
+- Przycisk „WŁĄCZ DŹWIĘK / WYŁĄCZ DŹWIĘK” steruje ambientem. Dźwięk startuje dopiero po świadomym kliknięciu użytkownika, zgodnie z zasadami przeglądarek.
+- Odkrycie nowej lokacji może odtworzyć krótki trójdźwięk, jeśli audio jest włączone.
+- Ambient zmienia wysokość tonu w zależności od pory dnia. To syntetyczny prototyp nastroju, nie nagrania prawdziwej dżungli ani realistyczny wiatr.
