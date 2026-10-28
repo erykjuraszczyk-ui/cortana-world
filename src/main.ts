@@ -108,6 +108,52 @@ for (let i = 0; i < 22; i++) {
 }
 scene.add(crystals);
 
+// Proceduralne biomy 3D — geometria generowana lokalnie w Three.js.
+const biomeRoot = new THREE.Group();
+const pineMat = new THREE.MeshStandardMaterial({ color: "#245b50", roughness: 0.96 });
+const trunkMat = new THREE.MeshStandardMaterial({ color: "#72513a", roughness: 1 });
+const rockMat = new THREE.MeshStandardMaterial({ color: "#77858c", roughness: 0.88 });
+const crystalBiomeMat = new THREE.MeshStandardMaterial({ color: "#74dce9", emissive: "#1d8096", emissiveIntensity: 0.7, roughness: 0.24, metalness: 0.16 });
+function addBiomePatch(name: string, x: number, z: number, rx: number, rz: number, color: string): void {
+ const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshStandardMaterial({color,roughness:1,transparent:true,opacity:0.36,side:THREE.DoubleSide}));
+ mesh.name=name; mesh.rotation.x=-Math.PI/2; mesh.position.set(x,0.12,z); mesh.scale.set(rx,rz,1); mesh.receiveShadow=true; biomeRoot.add(mesh);
+}
+function addBiomeRock(x:number,z:number,size:number,seed:number):void{
+ const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(size,1),rockMat);
+ rock.position.set(x,size*0.55,z); rock.scale.set(1+(seed%3)*0.13,0.65+(seed%4)*0.08,0.85+(seed%2)*0.2);
+ rock.rotation.set(seed*0.13,seed*0.7,seed*0.09); rock.castShadow=true; rock.receiveShadow=true; biomeRoot.add(rock);
+}
+function addPine(x:number,z:number,scale:number,seed:number):void{
+ const group=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.22*scale,0.42*scale,4.8*scale,7),trunkMat);
+ trunk.position.y=2.4*scale; trunk.castShadow=true; group.add(trunk);
+ for(let tier=0;tier<3;tier++){
+  const crown=new THREE.Mesh(new THREE.ConeGeometry((2.5-tier*0.45)*scale,3.2*scale,7),pineMat);
+  crown.position.y=(4.1+tier*1.65)*scale; crown.rotation.y=seed*0.23+tier; crown.castShadow=true; group.add(crown);
+ }
+ group.position.set(x,0,z); group.rotation.y=seed*0.31; biomeRoot.add(group);
+}
+function addCrystalCluster(x:number,z:number,scale:number,seed:number):void{
+ const group=new THREE.Group();
+ for(let n=0;n<3;n++){
+  const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(scale*(0.55+n*0.16),1),crystalBiomeMat);
+  crystal.position.set((n-1)*scale*0.9,scale*(0.55+n*0.1),(seed%3-1)*scale*0.35);
+  crystal.rotation.set(0.1*n,seed+n,0.14*(n-1)); crystal.scale.y=1.5+n*0.18; crystal.castShadow=true; group.add(crystal);
+ }
+ group.position.set(x,0,z); biomeRoot.add(group);
+}
+function biomeRandom(seed:number):number{const value=Math.sin(seed*127.1+311.7)*43758.5453;return value-Math.floor(value);}
+addBiomePatch("Dżungla pod kopułą",-140,30,110,125,"#1c6d4d");
+addBiomePatch("Kamienisty grzbiet",145,70,100,115,"#87969c");
+addBiomePatch("Piaszczysty brzeg",-105,-105,125,86,"#c3b477");
+addBiomePatch("Ruiny Cytadeli",0,-52,72,65,"#697b80");
+addBiomePatch("Polana Kryształów",0,-8,49,42,"#397f8d");
+let biomeSeed=1;
+for(let i=0;i<64;i++){const seed=biomeSeed++;addPine(-205+biomeRandom(seed)*130,-30+biomeRandom(seed+90)*155,0.85+biomeRandom(seed+180)*0.95,seed);}
+for(let i=0;i<52;i++){const seed=biomeSeed++;addBiomeRock(92+biomeRandom(seed)*125,8+biomeRandom(seed+90)*140,1.8+biomeRandom(seed+180)*4.5,seed);}
+for(let i=0;i<34;i++){const seed=biomeSeed++;const angle=biomeRandom(seed)*Math.PI*2;const radius=48+biomeRandom(seed+90)*82;addCrystalCluster(Math.cos(angle)*radius,-8+Math.sin(angle)*radius*0.75,1.2+biomeRandom(seed+180)*2.1,seed);}
+scene.add(biomeRoot);
+
 function makeTree(x: number, z: number, scale: number): THREE.Group {
   const group = new THREE.Group();
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5 * scale, 0.9 * scale, 7 * scale, 7), new THREE.MeshStandardMaterial({ color: "#644d3b", roughness: 1 }));
@@ -143,6 +189,9 @@ const dataFragments: DataFragment[] = fragmentSpecs.map((spec) => {
   const collected = savedFragments.has(spec.id); group.visible = !collected; scene.add(group);
   return { ...spec, group, collected };
 });
+
+// Gęstsza dżungla z wariacją rozmiaru i kierunku koron.
+for(let i=0;i<46;i++){const seed=biomeSeed++;const tree=makeTree(-190+biomeRandom(seed)*110,-28+biomeRandom(seed+91)*118,0.7+biomeRandom(seed+181)*1.3);tree.rotation.y=biomeRandom(seed+271)*Math.PI*2;biomeRoot.add(tree);}
 
 const relay = new THREE.Group();
 const relayBase = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.4, 2.4, 8), stoneMat);

@@ -74,3 +74,14 @@ Fragmenty danych są fikcyjnym elementem świata gry, a nie rzeczywistą technol
 - Odkrycia są zapisywane w localStorage. Zbliż się do punktu zainteresowania, aby poznać jego nazwę i opis.
 - Mapa jest schematyczna i pokazuje regionalny obszar gry, nie dokładną mapę geograficzną. Nazwy odległych punktów nie oznaczają jeszcze, że wszystkie biomy mają własne, szczegółowo zbudowane środowiska 3D.
 - Sterowanie klawiaturą nie reaguje na WASD, gdy kursor znajduje się w polu wpisywania wiadomości.
+
+
+## Etap 06 — proceduralne biomy 3D
+
+- **Dżungla pod kopułą** — gęstsze drzewa i warstwy koron.
+- **Kamienisty grzbiet** — nieregularne skały o różnych rozmiarach.
+- **Piaszczysty brzeg** — odmienna kolorystycznie strefa przy jeziorze.
+- **Ruiny Cytadeli** — kamienisty obszar wokół ruin.
+- **Polana Kryształów** — proceduralne skupiska świecących kryształów.
+
+Rozmieszczenie dekoracji jest deterministyczne. To pierwsza warstwa biomów; kolejne ulepszenia mogą obejmować rzeźbę terenu, modele LOD, dźwięki środowiskowe i optymalizację instancjami. Wszystkie biomy są fikcyjnymi elementami świata gry.

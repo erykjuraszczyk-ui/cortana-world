@@ -44,3 +44,6 @@
 .map-location-item strong{font-size:11px;color:#e4faff}.map-location-item small{margin-top:4px;font-size:9px;line-height:1.45;color:#98b4c5}
 .map-unknown-note{padding:9px 10px;color:#8fb0c2;font-size:9px;line-height:1.5}
 @media(max-width:680px){.location-card{gap:7px;flex-wrap:wrap}.location-copy{flex:1;min-width:110px}.map-toggle{max-width:none;padding:8px;font-size:8px}.map-panel{top:74px;left:12px;right:12px;width:auto;max-height:calc(100vh - 145px);padding:12px}.map-panel-header h2{font-size:17px}.map-legend{gap:9px}}
+
+/* Etap 06 — biomy proceduralne 3D */
+.biome-legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.biome-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid #79dfff26;border-radius:999px;background:#061925b8;color:#c3eefa;font-size:8px;letter-spacing:.04em}.biome-chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
