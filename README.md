@@ -96,3 +96,12 @@ Rozmieszczenie dekoracji jest deterministyczne. To pierwsza warstwa biomów; kol
 - Zmiany są proceduralne i nie wymagają zewnętrznych modeli ani tekstur.
 
 Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie wcześniejsze dekoracje są jeszcze indywidualnie dopasowane do wysokości terenu; dopracowanie kolizji i rozmieszczenia będzie osobnym etapem.
+
+
+## Etap 08 — cykl dnia i nocy
+
+- Światło, kolor nieba, mgła i światło otoczenia zmieniają się płynnie w stylizowanym cyklu 240 sekund.
+- Dodano gwiazdy, których widoczność rośnie nocą.
+- Pasek górny pokazuje fazę: dzień, świt, zmierzch lub noc.
+- Przycisk „PAUZA CYKLU / WZNÓW CYKL” pozwala zatrzymać i wznowić zmianę czasu.
+- Cykl jest symulacją gry; nie synchronizuje się z rzeczywistą porą dnia ani astronomią.

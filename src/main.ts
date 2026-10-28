@@ -26,7 +26,9 @@ const mapLocationsEl = document.querySelector<HTMLElement>("#map-locations");
 const mapCountEl = document.querySelector<HTMLElement>("#map-count");
 const locationNameEl = document.querySelector<HTMLElement>("#location-name");
 const locationBiomeEl = document.querySelector<HTMLElement>("#location-biome");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const timeToggle = document.querySelector<HTMLButtonElement>("#time-toggle");
+const timeLabel = document.querySelector<HTMLElement>("#time-label");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -40,11 +42,66 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
 
-scene.add(new THREE.HemisphereLight("#d7f6ff", "#253b43", 2.0));
+const skyLight = new THREE.HemisphereLight("#d7f6ff", "#253b43", 2.0);
+scene.add(skyLight);
 const sun = new THREE.DirectionalLight("#fff0cb", 3.0);
 sun.position.set(-80, 140, 45); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
 sun.shadow.camera.left = -100; sun.shadow.camera.right = 100; sun.shadow.camera.top = 100; sun.shadow.camera.bottom = -100;
+
 scene.add(sun);
+
+// Stylizowany cykl dobowy niezależny od rzeczywistego czasu.
+const daySky = new THREE.Color("#8fc9e7");
+const nightSky = new THREE.Color("#071426");
+const dawnSky = new THREE.Color("#df987d");
+const dayFog = new THREE.Color("#9ccedb");
+const nightFog = new THREE.Color("#14263e");
+const duskFog = new THREE.Color("#8a718e");
+const daySun = new THREE.Color("#fff0cb");
+const nightSun = new THREE.Color("#9bbfff");
+const starsGeometry = new THREE.BufferGeometry();
+const starPositions: number[] = [];
+let starSeed = 1;
+function starRandom(): number { const value = Math.sin(starSeed++ * 127.1) * 43758.5453; return value - Math.floor(value); }
+for (let i = 0; i < 420; i++) {
+  const angle = starRandom() * Math.PI * 2;
+  const y = 100 + starRandom() * 570;
+  const radius = Math.sqrt(850 * 850 - y * y);
+  starPositions.push(Math.cos(angle) * radius, y, Math.sin(angle) * radius);
+}
+starsGeometry.setAttribute("position", new THREE.Float32BufferAttribute(starPositions, 3));
+const starsMaterial = new THREE.PointsMaterial({ color: "#d7edff", size: 2.2, transparent: true, opacity: 0, depthWrite: false, sizeAttenuation: false });
+const stars = new THREE.Points(starsGeometry, starsMaterial);
+stars.frustumCulled = false;
+scene.add(stars);
+let dayCyclePaused = false;
+const dayCycleSeconds = 240;
+let dayCyclePhase = 0.25;
+function updateDayNight(delta: number): void {
+  if (!dayCyclePaused) dayCyclePhase = (dayCyclePhase + delta / dayCycleSeconds) % 1;
+  const solar = Math.sin(dayCyclePhase * Math.PI * 2);
+  const daylight = THREE.MathUtils.smoothstep(solar, -0.16, 0.38);
+  const twilight = THREE.MathUtils.clamp(1 - Math.abs(solar) * 2.6, 0, 1);
+  const night = 1 - daylight;
+  const duskBlend = twilight * (solar < 0 ? 0.45 : 1);
+  scene.background = daySky.clone().lerp(nightSky, night).lerp(dawnSky, duskBlend * 0.58);
+  if (scene.fog instanceof THREE.FogExp2) {
+    scene.fog.color.copy(dayFog.clone().lerp(nightFog, night).lerp(duskFog, duskBlend * 0.52));
+    scene.fog.density = 0.00145 + night * 0.00055;
+  }
+  skyLight.intensity = 0.48 + daylight * 1.65;
+  skyLight.color.copy(nightSky.clone().lerp(daySky, daylight));
+  skyLight.groundColor.set(night > 0.65 ? "#101c35" : "#253b43");
+  sun.color.copy(nightSun.clone().lerp(daySun, daylight));
+  sun.intensity = 0.12 + daylight * 2.88;
+  const angle = dayCyclePhase * Math.PI * 2;
+  sun.position.set(Math.cos(angle) * 220, 25 + Math.max(0, solar) * 180, Math.sin(angle) * 160);
+  starsMaterial.opacity = THREE.MathUtils.clamp(night * 1.12, 0, 0.92);
+  timeLabel.textContent = night > 0.72 ? "NOC" : daylight < 0.38 ? (solar > 0 ? "ŚWIT" : "ZMIERZCH") : "DZIEŃ";
+  timeToggle.textContent = dayCyclePaused ? "WZNÓW CYKL" : "PAUZA CYKLU";
+  timeToggle.setAttribute("aria-pressed", String(dayCyclePaused));
+}
+timeToggle.addEventListener("click", () => { dayCyclePaused = !dayCyclePaused; updateDayNight(0); });
 
 const groundGeometry = new THREE.PlaneGeometry(1800, 1800, 90, 90);
 groundGeometry.rotateX(-Math.PI / 2);
@@ -641,6 +698,7 @@ function animate(): void {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
   const elapsed = performance.now() * 0.001;
+  updateDayNight(delta);
   const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
   const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
   const input = new THREE.Vector3();
