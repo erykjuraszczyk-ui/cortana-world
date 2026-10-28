@@ -36,7 +36,8 @@ const journalClose = document.querySelector<HTMLButtonElement>("#journal-close")
 const journalSummary = document.querySelector<HTMLElement>("#journal-summary");
 const journalQuests = document.querySelector<HTMLElement>("#journal-quests");
 const journalEntries = document.querySelector<HTMLOListElement>("#journal-entries");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel || !audioToggle || !audioLabel || !journalToggle || !journalPanel || !journalClose || !journalSummary || !journalQuests || !journalEntries) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const expeditionPointsEl = document.querySelector<HTMLElement>("#expedition-points");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel || !audioToggle || !audioLabel || !journalToggle || !journalPanel || !journalClose || !journalSummary || !journalQuests || !journalEntries || !expeditionPointsEl) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -387,6 +388,34 @@ helmet.position.y = 2.15; helmet.castShadow = true; player.add(helmet);
 const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.95, 0.36), stoneMat); backpack.position.set(0, 1.25, 0.55); player.add(backpack);
 player.position.set(0, 0, 8); scene.add(player);
 
+
+type LoreTerminal = { id: string; title: string; text: string; position: THREE.Vector3; group: THREE.Group };
+const loreTerminalSpecs = [
+  { id: "lore-dome", title: "Dziennik Kopuły · 01", text: "Pierwszy zespół badawczy uruchomił kopułę, by chronić dolinę przed gwałtownymi zmianami klimatu. W archiwum brakuje jednak zapisu o tym, kto zaprojektował jej rdzeń.", position: new THREE.Vector3(-138, 0, 44) },
+  { id: "lore-citadel", title: "Zapis Cytadeli · 02", text: "Stare wieże nie były fortecą. Ich układ kierował sygnały pomiędzy węzłami energetycznymi, zanim sieć przestała odpowiadać. Trzy fragmenty danych mogą pomóc odtworzyć połączenie.", position: new THREE.Vector3(0, 0, -52) },
+  { id: "lore-lake", title: "Echo Jeziora · 03", text: "Woda wzmacnia słabe impulsy emitowane przez podziemne kryształy. Nocą ich światło układa się w powtarzalny wzór — być może jest to pozostałość dawnego systemu nawigacji.", position: new THREE.Vector3(-95, 0, -105) },
+];
+const readTerminals = loadStringSet("cortara-read-terminals");
+let expeditionPoints = 0;
+try {
+  const storedPoints = Number(localStorage.getItem("cortara-expedition-points") ?? "0");
+  expeditionPoints = Number.isFinite(storedPoints) ? Math.max(0, Math.floor(storedPoints)) : 0;
+} catch { expeditionPoints = 0; }
+const loreTerminals: LoreTerminal[] = loreTerminalSpecs.map((spec, index) => {
+  const group = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.9, 1.1, 8), stoneMat);
+  base.position.y = 0.55; base.castShadow = true; base.receiveShadow = true; group.add(base);
+  const column = new THREE.Mesh(new THREE.BoxGeometry(1.45, 3.2, 0.75), paleMat);
+  column.position.y = 2.55; column.castShadow = true; group.add(column);
+  const screen = new THREE.Mesh(new THREE.BoxGeometry(1.65, 1.65, 0.18), new THREE.MeshStandardMaterial({ color: "#5ce8ff", emissive: "#19bce8", emissiveIntensity: 1.6, metalness: 0.3, roughness: 0.22 }));
+  screen.position.set(0, 3.2, -0.48); group.add(screen);
+  const beacon = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.07, 6, 32), new THREE.MeshBasicMaterial({ color: "#7cecff", transparent: true, opacity: 0.8 }));
+  beacon.rotation.x = Math.PI / 2; beacon.position.y = 0.16; group.add(beacon);
+  group.position.copy(spec.position); group.position.y = terrainHeight(spec.position.x, spec.position.z); group.userData.screen = screen; group.userData.beacon = beacon; group.userData.phase = index * 1.7;
+  scene.add(group);
+  return { ...spec, group };
+});
+
 // Proceduralny hologram przewodniczki, nie wymagający zewnętrznego modelu 3D.
 const cortanaHologram = createCortanaHologram();
 cortanaHologram.group.position.set(-5.5, 0, -2.5);
@@ -581,6 +610,7 @@ function renderJournal(): void {
     { title: "Przywrócenie sieci", detail: "Aktywuj przekaźnik w Dolinie", count: relayActivated ? 1 : 0, total: 1, done: relayActivated },
   ];
   journalSummary.textContent = "ZADANIA: " + quests.filter((quest) => quest.done).length + "/" + quests.length + " UKOŃCZONE";
+  expeditionPointsEl.textContent = expeditionPoints + " PKT";
   journalQuests.replaceChildren();
   quests.forEach((quest) => {
     const item = document.createElement("div"); item.className = "journal-quest" + (quest.done ? " complete" : "");
@@ -665,6 +695,22 @@ function updateMission(): void {
     : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const terminal = loreTerminals
+    .filter((entry) => !readTerminals.has(entry.id))
+    .map((entry) => ({ entry, distance: Math.hypot(player.position.x - entry.position.x, player.position.z - entry.position.z) }))
+    .filter((item) => item.distance < 12)
+    .sort((a, b) => a.distance - b.distance)[0];
+  if (terminal) {
+    readTerminals.add(terminal.entry.id);
+    localStorage.setItem("cortara-read-terminals", JSON.stringify([...readTerminals]));
+    expeditionPoints += 25;
+    localStorage.setItem("cortara-expedition-points", String(expeditionPoints));
+    messageEl.textContent = terminal.entry.title + ": " + terminal.entry.text;
+    recordJournal("Odczytano terminal: " + terminal.entry.title + " (+25 pkt)");
+    renderJournal();
+    showToast("Zapis odzyskany · +25 punktów ekspedycji");
+    return;
+  }
   const nearby = dataFragments.filter((fragment) => !fragment.collected)
     .sort((a, b) => player.position.distanceTo(a.position) - player.position.distanceTo(b.position))[0];
   if (nearby && player.position.distanceTo(nearby.position) < 10) {
@@ -865,6 +911,14 @@ function animate(): void {
   player.position.y = terrainHeight(player.position.x, player.position.z);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  loreTerminals.forEach((terminal, index) => {
+    const screen = terminal.group.userData.screen as THREE.Mesh;
+    const beacon = terminal.group.userData.beacon as THREE.Mesh;
+    screen.rotation.y = Math.sin(elapsed * 0.8 + index) * 0.04;
+    screen.scale.setScalar(readTerminals.has(terminal.id) ? 0.88 : 1 + Math.sin(elapsed * 2 + index) * 0.035);
+    beacon.rotation.z += delta * 0.35;
+    (screen.material as THREE.MeshStandardMaterial).emissiveIntensity = readTerminals.has(terminal.id) ? 0.25 : 1.4 + Math.sin(elapsed * 2 + index) * 0.45;
+  });
   dataFragments.forEach((fragment, index) => {
     if (fragment.collected) return;
     fragment.group.position.y = Math.sin(elapsed * 1.8 + index) * 0.45;

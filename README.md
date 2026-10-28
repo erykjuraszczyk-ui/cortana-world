@@ -121,3 +121,12 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Trzy zadania śledzące postęp: zebranie 3 fragmentów danych, odkrycie 5 lokacji i aktywacja przekaźnika.
 - Dziennik zapisuje ostatnie 12 zdarzeń: odkrycia, zebrane fragmenty, aktywację przekaźnika i reset misji. Wpisy są przechowywane lokalnie w przeglądarce.
 - Panel pokazuje postęp zadań i historię z godziną lokalną urządzenia. To lokalny system prototypowy, bez konta i synchronizacji między urządzeniami.
+
+ 
+## Etap 11 — terminale fabularne i nagrody za eksplorację
+
+- Dodano trzy interaktywne terminale 3D: Dziennik Kopuły, Zapis Cytadeli i Echo Jeziora. Podejdź na odległość około 12 jednostek i naciśnij **E** lub dotknij przycisku **INTERAKCJA**.
+- Każdy terminal można odczytać tylko raz na danej przeglądarce. Odczyt wyświetla zapis w panelu Cortany i dopisuje wydarzenie do dziennika.
+- Za każdy nowy zapis przyznawane jest 25 punktów ekspedycji. Suma jest zapisywana lokalnie i widoczna w dzienniku.
+- Terminale mają własne modele proceduralne, animowany ekran i pierścień sygnałowy. Treść to fikcyjna historia świata gry.
+- Zebrane punkty i przeczytane terminale nie są jeszcze synchronizowane między urządzeniami ani przypisane do konta gracza.
