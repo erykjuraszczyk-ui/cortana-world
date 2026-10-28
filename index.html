@@ -36,6 +36,15 @@
         </section>
         <section class="location-card glass"><span class="location-icon">⌖</span><div class="location-copy"><small>LOKALIZACJA</small><strong id="location-name">Dolina Cytadeli</strong><small class="location-biome" id="location-biome">ZIELONE SERCE</small></div><div class="coordinates" id="coordinates">X 000 · Z 000</div><button id="map-toggle" class="map-toggle" type="button" aria-expanded="false" aria-controls="map-panel">MAPA ŚWIATA [M]</button></section>
       </main>
+      <section id="journal-panel" class="journal-panel glass" hidden aria-label="Dziennik ekspedycji">
+        <div class="map-panel-header">
+          <div><div class="eyebrow">DZIENNIK EKSPEDYCJI</div><h2>Kronika odkryć</h2><small id="journal-summary">ZADANIA: 0/3</small></div>
+          <button id="journal-close" class="map-close" type="button" aria-label="Zamknij dziennik">×</button>
+        </div>
+        <div class="journal-quests" id="journal-quests" aria-live="polite"></div>
+        <div class="journal-log-title">OSTATNIE WPISY</div>
+        <ol id="journal-entries" class="journal-entries" aria-live="polite"></ol>
+      </section>
       <section id="map-panel" class="map-panel glass" hidden aria-label="Mapa świata Cortany">
         <div class="map-panel-header">
           <div><div class="eyebrow">NAWIGACJA</div><h2>Mapa Doliny</h2><small id="map-count">ODKRYTE LOKACJE: 1/9</small></div>
@@ -46,7 +55,7 @@
         <div id="map-locations" class="map-locations" aria-live="polite"></div>
       </section>
       <footer class="bottom-hud">
-        <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>RUCH</span><kbd>SHIFT</kbd><span>BIEG</span><kbd>E</kbd><span>INTERAKCJA</span></div>
+        <div class="controls"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>RUCH</span><kbd>SHIFT</kbd><span>BIEG</span><kbd>E</kbd><span>INTERAKCJA</span><button id="journal-toggle" class="journal-toggle" type="button" aria-expanded="false" aria-controls="journal-panel">DZIENNIK [J]</button></div>
         <button id="reset-button" class="icon-button" type="button" title="Zresetuj misję" aria-label="Zresetuj misję">↺</button>
       </footer>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>

@@ -113,3 +113,11 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Przycisk „WŁĄCZ DŹWIĘK / WYŁĄCZ DŹWIĘK” steruje ambientem. Dźwięk startuje dopiero po świadomym kliknięciu użytkownika, zgodnie z zasadami przeglądarek.
 - Odkrycie nowej lokacji może odtworzyć krótki trójdźwięk, jeśli audio jest włączone.
 - Ambient zmienia wysokość tonu w zależności od pory dnia. To syntetyczny prototyp nastroju, nie nagrania prawdziwej dżungli ani realistyczny wiatr.
+
+ 
+## Etap 10 — dziennik ekspedycji i zadania poboczne
+
+- Dziennik otwierany przyciskiem **DZIENNIK** lub klawiszem **J**; klawisz **Escape** zamyka panel.
+- Trzy zadania śledzące postęp: zebranie 3 fragmentów danych, odkrycie 5 lokacji i aktywacja przekaźnika.
+- Dziennik zapisuje ostatnie 12 zdarzeń: odkrycia, zebrane fragmenty, aktywację przekaźnika i reset misji. Wpisy są przechowywane lokalnie w przeglądarce.
+- Panel pokazuje postęp zadań i historię z godziną lokalną urządzenia. To lokalny system prototypowy, bez konta i synchronizacji między urządzeniami.

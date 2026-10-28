@@ -30,7 +30,13 @@ const timeToggle = document.querySelector<HTMLButtonElement>("#time-toggle");
 const timeLabel = document.querySelector<HTMLElement>("#time-label");
 const audioToggle = document.querySelector<HTMLButtonElement>("#audio-toggle");
 const audioLabel = document.querySelector<HTMLElement>("#audio-label");
-if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel || !audioToggle || !audioLabel) throw new Error("Nie udało się uruchomić interfejsu gry.");
+const journalToggle = document.querySelector<HTMLButtonElement>("#journal-toggle");
+const journalPanel = document.querySelector<HTMLElement>("#journal-panel");
+const journalClose = document.querySelector<HTMLButtonElement>("#journal-close");
+const journalSummary = document.querySelector<HTMLElement>("#journal-summary");
+const journalQuests = document.querySelector<HTMLElement>("#journal-quests");
+const journalEntries = document.querySelector<HTMLOListElement>("#journal-entries");
+if (!canvas || !messageEl || !missionStateEl || !progressEl || !coordinatesEl || !toastEl || !talkButton || !resetButton || !touchInteract || !voiceButton || !chatForm || !chatInput || !sendButton || !statusLabel || !mapToggle || !mapPanel || !mapClose || !mapCanvas || !mapLocationsEl || !mapCountEl || !locationNameEl || !locationBiomeEl || !timeToggle || !timeLabel || !audioToggle || !audioLabel || !journalToggle || !journalPanel || !journalClose || !journalSummary || !journalQuests || !journalEntries) throw new Error("Nie udało się uruchomić interfejsu gry.");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color("#8fc9e7");
@@ -431,6 +437,7 @@ const worldLocations: WorldLocation[] = locationSpecs.map((spec) => ({
   discovered: knownLocations.has(spec.id),
 }));
 let mapOpen = false;
+let journalOpen = false;
 let lastMapDraw = 0;
 let lastLocationRefresh = 0;
 
@@ -547,6 +554,63 @@ function setMapOpen(open: boolean): void {
     refreshMapList();
   }
 }
+
+type JournalEntry = { text: string; time: string };
+const journalStorageKey = "cortara-expedition-journal";
+function loadJournalEntries(): JournalEntry[] {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(journalStorageKey) ?? "[]");
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((entry): entry is JournalEntry => !!entry && typeof entry.text === "string" && typeof entry.time === "string").slice(0, 12);
+  } catch { return []; }
+}
+let journalLog = loadJournalEntries();
+function recordJournal(text: string): void {
+  const entry = { text, time: new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }) };
+  if (journalLog[0]?.text === text) return;
+  journalLog = [entry, ...journalLog].slice(0, 12);
+  localStorage.setItem(journalStorageKey, JSON.stringify(journalLog));
+  renderJournal();
+}
+function renderJournal(): void {
+  const found = dataFragments.filter((fragment) => fragment.collected).length;
+  const discovered = worldLocations.filter((location) => location.discovered).length;
+  const quests = [
+    { title: "Archiwista", detail: "Zbierz trzy fragmenty danych", count: found, total: dataFragments.length, done: found === dataFragments.length },
+    { title: "Kartograf", detail: "Odkryj 5 lokacji", count: Math.min(discovered, 5), total: 5, done: discovered >= 5 },
+    { title: "Przywrócenie sieci", detail: "Aktywuj przekaźnik w Dolinie", count: relayActivated ? 1 : 0, total: 1, done: relayActivated },
+  ];
+  journalSummary.textContent = "ZADANIA: " + quests.filter((quest) => quest.done).length + "/" + quests.length + " UKOŃCZONE";
+  journalQuests.replaceChildren();
+  quests.forEach((quest) => {
+    const item = document.createElement("div"); item.className = "journal-quest" + (quest.done ? " complete" : "");
+    const title = document.createElement("strong"); title.textContent = (quest.done ? "✓ " : "◇ ") + quest.title;
+    const detail = document.createElement("small"); detail.textContent = quest.detail;
+    const progress = document.createElement("div"); progress.className = "journal-progress";
+    const fill = document.createElement("span"); fill.style.width = String(Math.round(quest.count / quest.total * 100)) + "%"; progress.append(fill);
+    const count = document.createElement("small"); count.className = "journal-count"; count.textContent = quest.count + "/" + quest.total;
+    item.append(title, detail, progress, count); journalQuests.append(item);
+  });
+  journalEntries.replaceChildren();
+  if (journalLog.length === 0) {
+    const empty = document.createElement("li"); empty.className = "journal-empty"; empty.textContent = "Brak wpisów. Eksploruj świat, zbieraj fragmenty i odkrywaj nowe miejsca."; journalEntries.append(empty);
+  } else {
+    journalLog.forEach((entry) => {
+      const item = document.createElement("li");
+      const time = document.createElement("time"); time.textContent = entry.time;
+      const detail = document.createElement("span"); detail.textContent = entry.text;
+      item.append(time, detail); journalEntries.append(item);
+    });
+  }
+}
+function setJournalOpen(open: boolean): void {
+  journalOpen = open;
+  journalPanel.hidden = !open;
+  journalToggle.setAttribute("aria-expanded", String(open));
+  journalToggle.textContent = open ? "ZAMKNIJ DZIENNIK [J]" : "DZIENNIK [J]";
+  if (open) renderJournal();
+}
+
 function updateLocationDiscovery(): void {
   let changed = false;
   for (const location of worldLocations) {
@@ -558,6 +622,7 @@ function updateLocationDiscovery(): void {
       knownLocations.add(location.id);
       changed = true;
       showToast("Odkryto lokację: " + location.name);
+      recordJournal("Odkryto: " + location.name);
       playDiscoveryChime();
     }
   }
@@ -565,6 +630,7 @@ function updateLocationDiscovery(): void {
     localStorage.setItem("cortara-discovered-locations", JSON.stringify([...knownLocations]));
     refreshMapList();
     renderMap();
+    renderJournal();
   }
   const near = worldLocations
     .map((location) => ({
@@ -604,7 +670,7 @@ function interact(): void {
   if (nearby && player.position.distanceTo(nearby.position) < 10) {
     nearby.collected = true; nearby.group.visible = false; savedFragments.add(nearby.id);
     localStorage.setItem("cortara-data-fragments", JSON.stringify([...savedFragments]));
-    updateMission(); showToast(`Zebrano: ${nearby.label}`); return;
+    updateMission(); recordJournal("Zebrano fragment: " + nearby.label); renderJournal(); showToast(`Zebrano: ${nearby.label}`); return;
   }
   if (player.position.distanceTo(relay.position) > 16) {
     showToast(nearby ? "Fragment danych jest niedaleko. Podejdź bliżej i naciśnij E." : "Cel jest dalej. Rozejrzyj się za błękitnymi fragmentami danych.");
@@ -619,6 +685,8 @@ function interact(): void {
   }
   relayActivated = true; localStorage.setItem("cortara-relay-activated", "true");
   relayOrb.material = makeOrbMaterial(true); relayLight.color.set("#71ffcb"); updateMission();
+  recordJournal("Aktywowano przekaźnik — sieć przywrócona.");
+  renderJournal();
   showToast("Misja ukończona: sieć przekaźnika przywrócona.");
 }
 function speakCurrentMessage(): void {
@@ -713,14 +781,19 @@ function resetMission(): void {
   savedFragments.clear(); localStorage.removeItem("cortara-data-fragments");
   relayOrb.material = makeOrbMaterial(false); relayLight.color.set("#42dfff"); updateMission();
   showToast("Misja i zebrane fragmenty zostały zresetowane.");
+  recordJournal("Misja główna została zresetowana.");
+  renderJournal();
 }
 updateMission();
 updateLocationDiscovery();
 refreshMapList();
+renderJournal();
 talkButton.addEventListener("click", talk);
 voiceButton.addEventListener("click", speakCurrentMessage);
 mapToggle.addEventListener("click", () => setMapOpen(!mapOpen));
 mapClose.addEventListener("click", () => setMapOpen(false));
+journalToggle.addEventListener("click", () => setJournalOpen(!journalOpen));
+journalClose.addEventListener("click", () => setJournalOpen(false));
 chatForm.addEventListener("submit", (event) => { void submitChat(event); });
 void refreshBackendStatus();
 resetButton.addEventListener("click", resetMission); touchInteract.addEventListener("click", interact);
@@ -731,10 +804,18 @@ window.addEventListener("keydown", (event) => {
   if (key === "m" && !event.repeat) {
     event.preventDefault();
     setMapOpen(!mapOpen);
+    if (mapOpen) setJournalOpen(false);
     return;
   }
-  if (key === "escape" && mapOpen) {
+  if (key === "j" && !event.repeat) {
+    event.preventDefault();
+    setJournalOpen(!journalOpen);
+    if (journalOpen) setMapOpen(false);
+    return;
+  }
+  if (key === "escape" && (mapOpen || journalOpen)) {
     setMapOpen(false);
+    setJournalOpen(false);
     return;
   }
   if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", "shift", "e"].includes(key)) event.preventDefault();
