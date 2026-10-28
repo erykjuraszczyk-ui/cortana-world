@@ -85,3 +85,14 @@ Fragmenty danych są fikcyjnym elementem świata gry, a nie rzeczywistą technol
 - **Polana Kryształów** — proceduralne skupiska świecących kryształów.
 
 Rozmieszczenie dekoracji jest deterministyczne. To pierwsza warstwa biomów; kolejne ulepszenia mogą obejmować rzeźbę terenu, modele LOD, dźwięki środowiskowe i optymalizację instancjami. Wszystkie biomy są fikcyjnymi elementami świata gry.
+
+
+## Etap 07 — rzeźba terenu i naturalne szlaki
+
+- Powierzchnia ma deterministyczne, łagodne nierówności oraz subtelne grzbiety i zagłębienie przy jeziorze.
+- Pozycja gracza podąża za wysokością gruntu.
+- Dodano trzy krzywoliniowe szlaki łączące okolice Doliny, ruin i jeziora.
+- Dodano 180 kwiatów przez THREE.InstancedMesh, ograniczając liczbę wywołań rysowania względem osobnych obiektów.
+- Zmiany są proceduralne i nie wymagają zewnętrznych modeli ani tekstur.
+
+Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie wcześniejsze dekoracje są jeszcze indywidualnie dopasowane do wysokości terenu; dopracowanie kolizji i rozmieszczenia będzie osobnym etapem.

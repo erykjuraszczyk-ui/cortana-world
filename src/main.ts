@@ -48,10 +48,18 @@ scene.add(sun);
 
 const groundGeometry = new THREE.PlaneGeometry(1800, 1800, 90, 90);
 groundGeometry.rotateX(-Math.PI / 2);
+function terrainHeight(x: number, z: number): number {
+  const rolling = Math.sin(x * 0.012) * 2.8 + Math.cos(z * 0.014) * 2.4;
+  const ridges = Math.sin((x + z) * 0.021) * 1.6;
+  const ridgeMask = Math.max(0, Math.min(1, (x - 45) / 110));
+  const hills = Math.sin(x * 0.028) * Math.cos(z * 0.024) * 3.2 * ridgeMask;
+  const basin = -Math.exp(-((x + 100) ** 2 + (z + 105) ** 2) / 7800) * 2.4;
+  return rolling + ridges + hills + basin;
+}
 const positions = groundGeometry.attributes.position;
 for (let i = 0; i < positions.count; i++) {
   const x = positions.getX(i), z = positions.getZ(i);
-  positions.setY(i, Math.sin(x * 0.018) * 2.6 + Math.cos(z * 0.022) * 2.2 + Math.sin((x + z) * 0.035) * 1.2);
+  positions.setY(i, terrainHeight(x, z));
 }
 groundGeometry.computeVertexNormals();
 const ground = new THREE.Mesh(groundGeometry, new THREE.MeshStandardMaterial({ color: "#416d57", roughness: 0.96 }));
@@ -153,6 +161,39 @@ for(let i=0;i<64;i++){const seed=biomeSeed++;addPine(-205+biomeRandom(seed)*130,
 for(let i=0;i<52;i++){const seed=biomeSeed++;addBiomeRock(92+biomeRandom(seed)*125,8+biomeRandom(seed+90)*140,1.8+biomeRandom(seed+180)*4.5,seed);}
 for(let i=0;i<34;i++){const seed=biomeSeed++;const angle=biomeRandom(seed)*Math.PI*2;const radius=48+biomeRandom(seed+90)*82;addCrystalCluster(Math.cos(angle)*radius,-8+Math.sin(angle)*radius*0.75,1.2+biomeRandom(seed+180)*2.1,seed);}
 scene.add(biomeRoot);
+
+// Łagodne ścieżki łączące najważniejsze obszary doliny.
+const pathMaterial = new THREE.MeshStandardMaterial({ color: "#9aab8d", roughness: 1, transparent: true, opacity: 0.54 });
+function addTrail(points: THREE.Vector3[], radius: number): void {
+  const grounded = points.map((point) => new THREE.Vector3(point.x, terrainHeight(point.x, point.z) + 0.16, point.z));
+  const curve = new THREE.CatmullRomCurve3(grounded);
+  const trail = new THREE.Mesh(new THREE.TubeGeometry(curve, 90, radius, 5, false), pathMaterial);
+  trail.name = "Naturalna ścieżka"; trail.receiveShadow = true; scene.add(trail);
+}
+addTrail([new THREE.Vector3(0,0,12),new THREE.Vector3(-18,0,0),new THREE.Vector3(-32,0,-22),new THREE.Vector3(-15,0,-42),new THREE.Vector3(0,0,-52)],1.5);
+addTrail([new THREE.Vector3(0,0,12),new THREE.Vector3(25,0,20),new THREE.Vector3(32,0,30)],1.25);
+addTrail([new THREE.Vector3(-22,0,6),new THREE.Vector3(-52,0,-15),new THREE.Vector3(-76,0,-56),new THREE.Vector3(-95,0,-105)],1.8);
+
+// Instanced low-poly flowers reduce draw calls.
+const flowerStemMaterial = new THREE.MeshStandardMaterial({ color: "#7ba66a", roughness: 1 });
+const flowerHeadMaterial = new THREE.MeshStandardMaterial({ color: "#c5eaff", emissive: "#327f9c", emissiveIntensity: 0.18, roughness: 0.72 });
+const flowerStemGeometry = new THREE.CylinderGeometry(0.035, 0.05, 0.48, 5);
+const flowerHeadGeometry = new THREE.IcosahedronGeometry(0.16, 0);
+const flowerCount = 180;
+const flowerStems = new THREE.InstancedMesh(flowerStemGeometry, flowerStemMaterial, flowerCount);
+const flowerHeads = new THREE.InstancedMesh(flowerHeadGeometry, flowerHeadMaterial, flowerCount);
+const flowerDummy = new THREE.Object3D();
+for (let i = 0; i < flowerCount; i++) {
+  const x = -95 + biomeRandom(i + 701) * 180;
+  const z = -5 + biomeRandom(i + 901) * 120;
+  const y = terrainHeight(x, z);
+  const scale = 0.65 + biomeRandom(i + 1101) * 0.9;
+  flowerDummy.position.set(x, y + 0.24 * scale, z); flowerDummy.scale.setScalar(scale);
+  flowerDummy.rotation.y = biomeRandom(i + 1301) * Math.PI * 2; flowerDummy.updateMatrix(); flowerStems.setMatrixAt(i, flowerDummy.matrix);
+  flowerDummy.position.y = y + 0.52 * scale; flowerDummy.scale.setScalar(scale * 0.9); flowerDummy.updateMatrix(); flowerHeads.setMatrixAt(i, flowerDummy.matrix);
+}
+flowerStems.instanceMatrix.needsUpdate = true; flowerHeads.instanceMatrix.needsUpdate = true;
+scene.add(flowerStems, flowerHeads);
 
 function makeTree(x: number, z: number, scale: number): THREE.Group {
   const group = new THREE.Group();
@@ -612,6 +653,7 @@ function animate(): void {
   }
   player.position.x = THREE.MathUtils.clamp(player.position.x, -790, 790);
   player.position.z = THREE.MathUtils.clamp(player.position.z, -790, 790);
+  player.position.y = terrainHeight(player.position.x, player.position.z);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
   dataFragments.forEach((fragment, index) => {

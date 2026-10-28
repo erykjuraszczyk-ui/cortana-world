@@ -47,3 +47,6 @@
 
 /* Etap 06 — biomy proceduralne 3D */
 .biome-legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.biome-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid #79dfff26;border-radius:999px;background:#061925b8;color:#c3eefa;font-size:8px;letter-spacing:.04em}.biome-chip i{width:7px;height:7px;border-radius:50%;display:inline-block}
+
+/* Etap 07 — teren, ścieżki i czytelność biomów */
+.environment-note{color:#a9c9d7;font-size:9px;line-height:1.5}
