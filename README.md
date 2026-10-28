@@ -130,3 +130,12 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Za każdy nowy zapis przyznawane jest 25 punktów ekspedycji. Suma jest zapisywana lokalnie i widoczna w dzienniku.
 - Terminale mają własne modele proceduralne, animowany ekran i pierścień sygnałowy. Treść to fikcyjna historia świata gry.
 - Zebrane punkty i przeczytane terminale nie są jeszcze synchronizowane między urządzeniami ani przypisane do konta gracza.
+
+
+
+## Etap 12 — kolekcja starożytnych artefaktów
+- Dodano trzy relikty 3D: **Ziarno Biosfery**, **Kompas Prądów** i **Serce Kryształu**.
+- Każdy ma unikatowy kształt, barwę i animację światła; znajdują się w oddalonych rejonach mapy.
+- Podejdź na odległość około 11 jednostek i naciśnij **E** lub użyj przycisku **INTERAKCJA** na telefonie.
+- Odkrycie wyświetla wpis fabularny i przyznaje **50 punktów ekspedycji**. Dziennik śledzi zadanie „Kolekcjoner reliktów”.
+- Kolekcja zapisuje się lokalnie w przeglądarce; nie ma jeszcze synchronizacji między urządzeniami.

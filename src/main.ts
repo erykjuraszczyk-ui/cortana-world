@@ -390,12 +390,32 @@ player.position.set(0, 0, 8); scene.add(player);
 
 
 type LoreTerminal = { id: string; title: string; text: string; position: THREE.Vector3; group: THREE.Group };
+type Relic = { id: string; name: string; lore: string; position: THREE.Vector3; group: THREE.Group };
+const relicSpecs = [
+ {id:"relic-seed",name:"Ziarno Biosfery",lore:"Nasiono przechowuje wzór pierwszych roślin, które przystosowały się do życia pod kopułą.",position:new THREE.Vector3(-168,0,-18)},
+ {id:"relic-compass",name:"Kompas Prądów",lore:"Kompas reaguje na przepływ energii pod powierzchnią i wskazuje zapomniane węzły.",position:new THREE.Vector3(148,0,-112)},
+ {id:"relic-heart",name:"Serce Kryształu",lore:"W minerale zapisano rytm rdzenia kopuły: trzy krótkie impulsy i jeden długi.",position:new THREE.Vector3(92,0,138)},
+];
 const loreTerminalSpecs = [
   { id: "lore-dome", title: "Dziennik Kopuły · 01", text: "Pierwszy zespół badawczy uruchomił kopułę, by chronić dolinę przed gwałtownymi zmianami klimatu. W archiwum brakuje jednak zapisu o tym, kto zaprojektował jej rdzeń.", position: new THREE.Vector3(-138, 0, 44) },
   { id: "lore-citadel", title: "Zapis Cytadeli · 02", text: "Stare wieże nie były fortecą. Ich układ kierował sygnały pomiędzy węzłami energetycznymi, zanim sieć przestała odpowiadać. Trzy fragmenty danych mogą pomóc odtworzyć połączenie.", position: new THREE.Vector3(0, 0, -52) },
   { id: "lore-lake", title: "Echo Jeziora · 03", text: "Woda wzmacnia słabe impulsy emitowane przez podziemne kryształy. Nocą ich światło układa się w powtarzalny wzór — być może jest to pozostałość dawnego systemu nawigacji.", position: new THREE.Vector3(-95, 0, -105) },
 ];
 const readTerminals = loadStringSet("cortara-read-terminals");
+const collectedRelics = loadStringSet("cortara-collected-relics");
+const relics: Relic[] = relicSpecs.map((spec,index)=>{
+ const group=new THREE.Group();
+ const colors=["#63ffbf","#5f9dff","#d59cff"];
+ const core=new THREE.Mesh(index===0?new THREE.IcosahedronGeometry(1.35,1):index===1?new THREE.OctahedronGeometry(1.6,0):new THREE.DodecahedronGeometry(1.45,0),new THREE.MeshStandardMaterial({color:"#c9f8ff",emissive:colors[index],emissiveIntensity:2,metalness:.38,roughness:.16}));
+ core.position.y=2.4; group.add(core);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(2.15,.065,7,36),new THREE.MeshBasicMaterial({color:colors[index],transparent:true,opacity:.85}));
+ ring.rotation.x=Math.PI/2; ring.position.y=1.5; group.add(ring);
+ const base=new THREE.Mesh(new THREE.CylinderGeometry(1.3,1.65,.55,7),stoneMat);base.position.y=.28;group.add(base);
+ group.position.set(spec.position.x,terrainHeight(spec.position.x,spec.position.z),spec.position.z);
+ group.userData.core=core;group.userData.ring=ring;group.userData.phase=index*1.9;
+ group.visible=!collectedRelics.has(spec.id);scene.add(group);
+ return {...spec,group};
+});
 let expeditionPoints = 0;
 try {
   const storedPoints = Number(localStorage.getItem("cortara-expedition-points") ?? "0");
@@ -608,9 +628,12 @@ function renderJournal(): void {
     { title: "Archiwista", detail: "Zbierz trzy fragmenty danych", count: found, total: dataFragments.length, done: found === dataFragments.length },
     { title: "Kartograf", detail: "Odkryj 5 lokacji", count: Math.min(discovered, 5), total: 5, done: discovered >= 5 },
     { title: "Przywrócenie sieci", detail: "Aktywuj przekaźnik w Dolinie", count: relayActivated ? 1 : 0, total: 1, done: relayActivated },
+    { title: "Kolekcjoner reliktów", detail: "Odnajdź trzy starożytne artefakty", count: relics.filter((relic)=>collectedRelics.has(relic.id)).length, total: 3, done: relics.every((relic)=>collectedRelics.has(relic.id)) },
   ];
   journalSummary.textContent = "ZADANIA: " + quests.filter((quest) => quest.done).length + "/" + quests.length + " UKOŃCZONE";
   expeditionPointsEl.textContent = expeditionPoints + " PKT";
+  const relicCountEl = document.querySelector<HTMLElement>("#relic-count");
+  if (relicCountEl) relicCountEl.textContent = relics.filter((relic)=>collectedRelics.has(relic.id)).length + "/3 ZEBRANE";
   journalQuests.replaceChildren();
   quests.forEach((quest) => {
     const item = document.createElement("div"); item.className = "journal-quest" + (quest.done ? " complete" : "");
@@ -695,6 +718,18 @@ function updateMission(): void {
     : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const relic = relics.filter((entry)=>!collectedRelics.has(entry.id))
+    .map((entry)=>({entry,distance:Math.hypot(player.position.x-entry.position.x,player.position.z-entry.position.z)}))
+    .filter((item)=>item.distance<11).sort((a,b)=>a.distance-b.distance)[0];
+  if(relic){
+    collectedRelics.add(relic.entry.id);
+    localStorage.setItem("cortara-collected-relics",JSON.stringify([...collectedRelics]));
+    relic.entry.group.visible=false; expeditionPoints+=50;
+    localStorage.setItem("cortara-expedition-points",String(expeditionPoints));
+    messageEl.textContent=relic.entry.name+": "+relic.entry.lore;
+    recordJournal("Odnaleziono artefakt: "+relic.entry.name+" (+50 pkt)");
+    renderJournal();playDiscoveryChime();showToast("Relikt zabezpieczony · +50 punktów ekspedycji");return;
+  }
   const terminal = loreTerminals
     .filter((entry) => !readTerminals.has(entry.id))
     .map((entry) => ({ entry, distance: Math.hypot(player.position.x - entry.position.x, player.position.z - entry.position.z) }))
@@ -911,6 +946,16 @@ function animate(): void {
   player.position.y = terrainHeight(player.position.x, player.position.z);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  relics.forEach((relic,index)=>{
+    if(collectedRelics.has(relic.id))return;
+    const core=relic.group.userData.core as THREE.Mesh;
+    const ring=relic.group.userData.ring as THREE.Mesh;
+    const phase=Number(relic.group.userData.phase??index);
+    core.rotation.y+=delta*(.35+index*.12);
+    core.position.y=2.4+Math.sin(elapsed*1.6+phase)*.28;
+    ring.rotation.z+=delta*(.38+index*.08);
+    (core.material as THREE.MeshStandardMaterial).emissiveIntensity=1.65+Math.sin(elapsed*2.1+phase)*.55;
+  });
   loreTerminals.forEach((terminal, index) => {
     const screen = terminal.group.userData.screen as THREE.Mesh;
     const beacon = terminal.group.userData.beacon as THREE.Mesh;
