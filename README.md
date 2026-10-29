@@ -139,3 +139,12 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Podejdź na odległość około 11 jednostek i naciśnij **E** lub użyj przycisku **INTERAKCJA** na telefonie.
 - Odkrycie wyświetla wpis fabularny i przyznaje **50 punktów ekspedycji**. Dziennik śledzi zadanie „Kolekcjoner reliktów”.
 - Kolekcja zapisuje się lokalnie w przeglądarce; nie ma jeszcze synchronizacji między urządzeniami.
+
+
+## Etap 13 — odblokowywane obszary i bramy energetyczne 3D
+
+- Dodano trzy bramy 3D: **Brama Szmaragdowa**, **Brama Prądów** i **Brama Rdzenia**, z metalową ramą, świecącym pierścieniem i polem energii.
+- Każda brama wymaga konkretnego reliktu: Ziarna Biosfery, Kompasu Prądów albo Serca Kryształu.
+- Podejdź do bramy i naciśnij **E**. Bez wymaganego reliktu gra podpowie, czego brakuje. Aktywacja przyznaje 75 punktów ekspedycji.
+- Stan odblokowania zapisuje się lokalnie, a dziennik śledzi zadanie „Strażnik przejść”.
+- To etap progresji i aktywacji bram; teleportacja do oddzielnych map i pełne nowe regiony są zaplanowane osobno.

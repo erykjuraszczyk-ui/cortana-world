@@ -391,6 +391,12 @@ player.position.set(0, 0, 8); scene.add(player);
 
 type LoreTerminal = { id: string; title: string; text: string; position: THREE.Vector3; group: THREE.Group };
 type Relic = { id: string; name: string; lore: string; position: THREE.Vector3; group: THREE.Group };
+type EnergyGate = { id: string; name: string; required: string; position: THREE.Vector3; group: THREE.Group; ring: THREE.Mesh; core: THREE.Mesh; unlocked: boolean };
+const gateSpecs = [
+ {id:"gate-forest",name:"Brama Szmaragdowa",required:"relic-seed",position:new THREE.Vector3(-214,0,-18),color:"#72ffc6"},
+ {id:"gate-ridge",name:"Brama Prądów",required:"relic-compass",position:new THREE.Vector3(202,0,-112),color:"#7bbcff"},
+ {id:"gate-heart",name:"Brama Rdzenia",required:"relic-heart",position:new THREE.Vector3(92,0,202),color:"#d7a0ff"},
+];
 const relicSpecs = [
  {id:"relic-seed",name:"Ziarno Biosfery",lore:"Nasiono przechowuje wzór pierwszych roślin, które przystosowały się do życia pod kopułą.",position:new THREE.Vector3(-168,0,-18)},
  {id:"relic-compass",name:"Kompas Prądów",lore:"Kompas reaguje na przepływ energii pod powierzchnią i wskazuje zapomniane węzły.",position:new THREE.Vector3(148,0,-112)},
@@ -402,6 +408,7 @@ const loreTerminalSpecs = [
   { id: "lore-lake", title: "Echo Jeziora · 03", text: "Woda wzmacnia słabe impulsy emitowane przez podziemne kryształy. Nocą ich światło układa się w powtarzalny wzór — być może jest to pozostałość dawnego systemu nawigacji.", position: new THREE.Vector3(-95, 0, -105) },
 ];
 const readTerminals = loadStringSet("cortara-read-terminals");
+const unlockedGates = loadStringSet("cortara-unlocked-gates");
 const collectedRelics = loadStringSet("cortara-collected-relics");
 const relics: Relic[] = relicSpecs.map((spec,index)=>{
  const group=new THREE.Group();
@@ -415,6 +422,21 @@ const relics: Relic[] = relicSpecs.map((spec,index)=>{
  group.userData.core=core;group.userData.ring=ring;group.userData.phase=index*1.9;
  group.visible=!collectedRelics.has(spec.id);scene.add(group);
  return {...spec,group};
+});
+const energyGates: EnergyGate[] = gateSpecs.map((spec,index)=>{
+ const group=new THREE.Group();
+ const frameMat=new THREE.MeshStandardMaterial({color:"#233d50",metalness:.72,roughness:.28,emissive:spec.color,emissiveIntensity:.22});
+ const left=new THREE.Mesh(new THREE.CylinderGeometry(.7,.95,11,8),frameMat);left.position.set(-4.2,5.5,0);left.castShadow=true;group.add(left);
+ const right=left.clone();right.position.x=4.2;group.add(right);
+ const top=new THREE.Mesh(new THREE.BoxGeometry(9.2,1.15,1.25),frameMat);top.position.set(0,11,0);top.castShadow=true;group.add(top);
+ const unlocked=unlockedGates.has(spec.id);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(3.55,.16,10,56),new THREE.MeshStandardMaterial({color:spec.color,emissive:spec.color,emissiveIntensity:unlocked?2.5:.35,metalness:.25,roughness:.2,transparent:true,opacity:unlocked?.9:.45}));
+ ring.position.set(0,5.5,.15);group.add(ring);
+ const core=new THREE.Mesh(new THREE.PlaneGeometry(6.4,8.7),new THREE.MeshBasicMaterial({color:spec.color,transparent:true,opacity:unlocked?.22:.07,side:THREE.DoubleSide,depthWrite:false}));
+ core.position.set(0,5.4,0);group.add(core);
+ const baseMesh=new THREE.Mesh(new THREE.CylinderGeometry(4.7,5.2,.7,8),stoneMat);baseMesh.position.y=.35;baseMesh.receiveShadow=true;group.add(baseMesh);
+ group.position.set(spec.position.x,terrainHeight(spec.position.x,spec.position.z),spec.position.z);group.userData.phase=index*1.4;scene.add(group);
+ return {...spec,group,ring,core,unlocked};
 });
 let expeditionPoints = 0;
 try {
@@ -629,11 +651,14 @@ function renderJournal(): void {
     { title: "Kartograf", detail: "Odkryj 5 lokacji", count: Math.min(discovered, 5), total: 5, done: discovered >= 5 },
     { title: "Przywrócenie sieci", detail: "Aktywuj przekaźnik w Dolinie", count: relayActivated ? 1 : 0, total: 1, done: relayActivated },
     { title: "Kolekcjoner reliktów", detail: "Odnajdź trzy starożytne artefakty", count: relics.filter((relic)=>collectedRelics.has(relic.id)).length, total: 3, done: relics.every((relic)=>collectedRelics.has(relic.id)) },
+    { title: "Strażnik przejść", detail: "Odblokuj trzy bramy energetyczne", count: energyGates.filter((gate)=>gate.unlocked).length, total: 3, done: energyGates.every((gate)=>gate.unlocked) },
   ];
   journalSummary.textContent = "ZADANIA: " + quests.filter((quest) => quest.done).length + "/" + quests.length + " UKOŃCZONE";
   expeditionPointsEl.textContent = expeditionPoints + " PKT";
   const relicCountEl = document.querySelector<HTMLElement>("#relic-count");
   if (relicCountEl) relicCountEl.textContent = relics.filter((relic)=>collectedRelics.has(relic.id)).length + "/3 ZEBRANE";
+  const gatesCountEl = document.querySelector<HTMLElement>("#gates-count");
+  if (gatesCountEl) gatesCountEl.textContent = energyGates.filter((gate)=>gate.unlocked).length + "/3 OTWARTE";
   journalQuests.replaceChildren();
   quests.forEach((quest) => {
     const item = document.createElement("div"); item.className = "journal-quest" + (quest.done ? " complete" : "");
@@ -718,6 +743,27 @@ function updateMission(): void {
     : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const nearestGate=energyGates.map((gate)=>({gate,distance:Math.hypot(player.position.x-gate.position.x,player.position.z-gate.position.z)})).filter((item)=>item.distance<13).sort((a,b)=>a.distance-b.distance)[0];
+  if(nearestGate){
+    const gate=nearestGate.gate;
+    if(!gate.unlocked){
+      if(!collectedRelics.has(gate.required)){
+        const needed=relicSpecs.find((item)=>item.id===gate.required);
+        messageEl.textContent=gate.name+": wymagany artefakt — "+(needed?.name??"nieznany relikt")+".";
+        showToast("Brama zamknięta · znajdź wymagany artefakt");return;
+      }
+      gate.unlocked=true;unlockedGates.add(gate.id);localStorage.setItem("cortara-unlocked-gates",JSON.stringify([...unlockedGates]));
+      (gate.ring.material as THREE.MeshStandardMaterial).opacity=.9;
+      (gate.ring.material as THREE.MeshStandardMaterial).emissiveIntensity=2.5;
+      (gate.core.material as THREE.MeshBasicMaterial).opacity=.22;
+      expeditionPoints+=75;localStorage.setItem("cortara-expedition-points",String(expeditionPoints));
+      recordJournal("Odblokowano bramę: "+gate.name+" (+75 pkt)");renderJournal();playDiscoveryChime();
+      messageEl.textContent=gate.name+" została aktywowana. Przejście energetyczne jest otwarte.";
+      showToast("Brama energetyczna odblokowana · +75 pkt");return;
+    }
+    messageEl.textContent=gate.name+" jest aktywna. Przejście do kolejnego regionu jest odblokowane.";
+    showToast("Brama otwarta · nowy obszar dostępny");return;
+  }
   const relic = relics.filter((entry)=>!collectedRelics.has(entry.id))
     .map((entry)=>({entry,distance:Math.hypot(player.position.x-entry.position.x,player.position.z-entry.position.z)}))
     .filter((item)=>item.distance<11).sort((a,b)=>a.distance-b.distance)[0];
@@ -946,6 +992,14 @@ function animate(): void {
   player.position.y = terrainHeight(player.position.x, player.position.z);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  energyGates.forEach((gate,index)=>{
+    const phase=Number(gate.group.userData.phase??index);
+    gate.ring.rotation.y=Math.sin(elapsed*.45+phase)*.06;
+    gate.ring.rotation.z=Math.sin(elapsed*.6+phase)*.035;
+    const material=gate.ring.material as THREE.MeshStandardMaterial;
+    material.emissiveIntensity=gate.unlocked?2.1+Math.sin(elapsed*2+phase)*.55:.28+Math.sin(elapsed*1.4+phase)*.12;
+    (gate.core.material as THREE.MeshBasicMaterial).opacity=gate.unlocked?.2+Math.sin(elapsed*1.5+phase)*.035:.045+Math.sin(elapsed*1.1+phase)*.018;
+  });
   relics.forEach((relic,index)=>{
     if(collectedRelics.has(relic.id))return;
     const core=relic.group.userData.core as THREE.Mesh;

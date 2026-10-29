@@ -89,3 +89,10 @@
 .relic-collection span{font-size:8px;letter-spacing:.12em;color:#a9c9d7}
 .relic-collection strong{font:700 11px 'Exo 2',sans-serif;color:#c9dfff;white-space:nowrap}
 .relic-collection small{display:block;margin-top:7px;color:#9ab7c8;font-size:9px;line-height:1.5}
+
+/* Etap 13 — bramy energetyczne i progresja regionów */
+.gate-collection{margin:0 0 12px;padding:11px 12px;border:1px solid #75dfff3b;border-radius:9px;background:#65cfff0a}
+.gate-collection>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gate-collection span{font-size:8px;letter-spacing:.12em;color:#a9c9d7}
+.gate-collection strong{font:700 11px 'Exo 2',sans-serif;color:#b9eaff;white-space:nowrap}
+.gate-collection small{display:block;margin-top:7px;color:#9ab7c8;font-size:9px;line-height:1.5}
