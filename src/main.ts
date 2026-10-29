@@ -391,11 +391,12 @@ player.position.set(0, 0, 8); scene.add(player);
 
 type LoreTerminal = { id: string; title: string; text: string; position: THREE.Vector3; group: THREE.Group };
 type Relic = { id: string; name: string; lore: string; position: THREE.Vector3; group: THREE.Group };
-type EnergyGate = { id: string; name: string; required: string; position: THREE.Vector3; group: THREE.Group; ring: THREE.Mesh; core: THREE.Mesh; unlocked: boolean };
+type EnergyGate = { id: string; name: string; required: string; position: THREE.Vector3; destination: THREE.Vector3; region: string; color: string; group: THREE.Group; ring: THREE.Mesh; core: THREE.Mesh; unlocked: boolean };
+type RegionPortal = { gateId: string; name: string; position: THREE.Vector3; group: THREE.Group; ring: THREE.Mesh };
 const gateSpecs = [
- {id:"gate-forest",name:"Brama Szmaragdowa",required:"relic-seed",position:new THREE.Vector3(-214,0,-18),color:"#72ffc6"},
- {id:"gate-ridge",name:"Brama Prądów",required:"relic-compass",position:new THREE.Vector3(202,0,-112),color:"#7bbcff"},
- {id:"gate-heart",name:"Brama Rdzenia",required:"relic-heart",position:new THREE.Vector3(92,0,202),color:"#d7a0ff"},
+ {id:"gate-forest",name:"Brama Szmaragdowa",required:"relic-seed",position:new THREE.Vector3(-214,0,-18),destination:new THREE.Vector3(-520,0,-390),region:"Ogród Pierwotny",color:"#72ffc6"},
+ {id:"gate-ridge",name:"Brama Prądów",required:"relic-compass",position:new THREE.Vector3(202,0,-112),destination:new THREE.Vector3(520,0,-390),region:"Wyżyny Prądów",color:"#7bbcff"},
+ {id:"gate-heart",name:"Brama Rdzenia",required:"relic-heart",position:new THREE.Vector3(92,0,202),destination:new THREE.Vector3(500,0,500),region:"Krater Rdzenia",color:"#d7a0ff"},
 ];
 const relicSpecs = [
  {id:"relic-seed",name:"Ziarno Biosfery",lore:"Nasiono przechowuje wzór pierwszych roślin, które przystosowały się do życia pod kopułą.",position:new THREE.Vector3(-168,0,-18)},
@@ -438,6 +439,40 @@ const energyGates: EnergyGate[] = gateSpecs.map((spec,index)=>{
  group.position.set(spec.position.x,terrainHeight(spec.position.x,spec.position.z),spec.position.z);group.userData.phase=index*1.4;scene.add(group);
  return {...spec,group,ring,core,unlocked};
 });
+
+const regionPortals: RegionPortal[] = [];
+function addRegionPortal(gate: EnergyGate): void {
+ const group=new THREE.Group();
+ const frame=new THREE.Mesh(new THREE.TorusGeometry(3.7,.24,12,56),new THREE.MeshStandardMaterial({color:gate.color,emissive:gate.color,emissiveIntensity:2.6,metalness:.25,roughness:.18}));
+ frame.position.y=4.2;group.add(frame);
+ const field=new THREE.Mesh(new THREE.CircleGeometry(3.25,48),new THREE.MeshBasicMaterial({color:gate.color,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));
+ field.rotation.y=Math.PI;field.position.set(0,4.2,0);group.add(field);
+ const foot=new THREE.Mesh(new THREE.CylinderGeometry(4.4,4.8,.6,8),stoneMat);foot.position.y=.3;group.add(foot);
+ group.position.set(gate.destination.x,terrainHeight(gate.destination.x,gate.destination.z),gate.destination.z);
+ scene.add(group);regionPortals.push({gateId:gate.id,name:gate.region,position:gate.destination.clone(),group,ring:frame});
+}
+function buildRegionLandmark(gate: EnergyGate,index:number): void {
+ const x=gate.destination.x,z=gate.destination.z;
+ const color=gate.color;
+ const groundMat=new THREE.MeshStandardMaterial({color:index===0?"#254c3c":index===1?"#263d55":"#49314e",roughness:.95});
+ const pad=new THREE.Mesh(new THREE.CylinderGeometry(29,34,1.1,12),groundMat);
+ pad.position.set(x,terrainHeight(x,z)-.15,z);pad.receiveShadow=true;scene.add(pad);
+ const crystalMat=new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:1.35,metalness:.22,roughness:.2});
+ for(let i=0;i<9;i++){
+  const angle=i*Math.PI*2/9, radius=10+(i%3)*3;
+  const h=5+(i%4)*2.8;
+  const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(1.5+(i%3)*.45,0),crystalMat);
+  crystal.scale.y=h/3;crystal.position.set(x+Math.cos(angle)*radius,terrainHeight(x+Math.cos(angle)*radius,z+Math.sin(angle)*radius)+h/2,z+Math.sin(angle)*radius);
+  crystal.rotation.set(.12*i,.4*i,.08*i);crystal.castShadow=true;scene.add(crystal);
+ }
+ const spire=new THREE.Mesh(index===1?new THREE.CylinderGeometry(1.2,3.4,23,6):new THREE.OctahedronGeometry(5,1),crystalMat);
+ spire.position.set(x,terrainHeight(x,z)+11,z);if(index!==1)spire.scale.y=2.2;spire.castShadow=true;scene.add(spire);
+ const halo=new THREE.Mesh(new THREE.TorusGeometry(8,.18,8,48),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.82}));
+ halo.position.set(x,terrainHeight(x,z)+13,z);halo.rotation.x=Math.PI/2;scene.add(halo);
+ addRegionPortal(gate);
+}
+energyGates.forEach((gate,index)=>buildRegionLandmark(gate,index));
+
 let expeditionPoints = 0;
 try {
   const storedPoints = Number(localStorage.getItem("cortara-expedition-points") ?? "0");
@@ -743,6 +778,17 @@ function updateMission(): void {
     : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const nearestRegionPortal=regionPortals.map((portal)=>({portal,distance:Math.hypot(player.position.x-portal.position.x,player.position.z-portal.position.z)})).filter((item)=>item.distance<12).sort((a,b)=>a.distance-b.distance)[0];
+  if(nearestRegionPortal){
+    const portal=nearestRegionPortal.portal;
+    const gate=energyGates.find((item)=>item.id===portal.gateId);
+    if(gate){
+      player.position.set(gate.position.x,terrainHeight(gate.position.x,gate.position.z),gate.position.z+10);
+      recordJournal("Powrót z regionu: "+portal.name);
+      messageEl.textContent="Powrót do Doliny Cytadeli przez "+gate.name+".";
+      showToast("Powrót do Doliny Cytadeli");playDiscoveryChime();return;
+    }
+  }
   const nearestGate=energyGates.map((gate)=>({gate,distance:Math.hypot(player.position.x-gate.position.x,player.position.z-gate.position.z)})).filter((item)=>item.distance<13).sort((a,b)=>a.distance-b.distance)[0];
   if(nearestGate){
     const gate=nearestGate.gate;
@@ -761,8 +807,10 @@ function interact(): void {
       messageEl.textContent=gate.name+" została aktywowana. Przejście energetyczne jest otwarte.";
       showToast("Brama energetyczna odblokowana · +75 pkt");return;
     }
-    messageEl.textContent=gate.name+" jest aktywna. Przejście do kolejnego regionu jest odblokowane.";
-    showToast("Brama otwarta · nowy obszar dostępny");return;
+    player.position.set(gate.destination.x,terrainHeight(gate.destination.x,gate.destination.z),gate.destination.z+10);
+    recordJournal("Przejście do regionu: "+gate.region);
+    messageEl.textContent="Wkroczono do regionu: "+gate.region+". Wróć do świecącego portalu, aby powrócić do Doliny Cytadeli.";
+    showToast("Nowy region · "+gate.region);playDiscoveryChime();return;
   }
   const relic = relics.filter((entry)=>!collectedRelics.has(entry.id))
     .map((entry)=>({entry,distance:Math.hypot(player.position.x-entry.position.x,player.position.z-entry.position.z)}))

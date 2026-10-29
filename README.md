@@ -148,3 +148,11 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - Podejdź do bramy i naciśnij **E**. Bez wymaganego reliktu gra podpowie, czego brakuje. Aktywacja przyznaje 75 punktów ekspedycji.
 - Stan odblokowania zapisuje się lokalnie, a dziennik śledzi zadanie „Strażnik przejść”.
 - To etap progresji i aktywacji bram; teleportacja do oddzielnych map i pełne nowe regiony są zaplanowane osobno.
+
+
+## Etap 14 — Nowe regiony 3D za bramami
+- **Ogród Pierwotny** za Bramą Szmaragdową: szmaragdowe kryształy i pradawna iglica.
+- **Wyżyny Prądów** za Bramą Prądów: chłodna, niebieska strefa kryształów i wysoka wieża.
+- **Krater Rdzenia** za Bramą Rdzenia: fioletowe kryształy i centralny monolit.
+- Po odblokowaniu bramy naciśnij **E** ponownie, aby przenieść się do regionu. Świecący portal w regionie pozwala wrócić do Doliny Cytadeli.
+- Stan odblokowania bram pozostaje zapisany lokalnie. Regiony są na razie strefami w obrębie jednej sceny 3D, a nie osobnymi mapami.

@@ -96,3 +96,7 @@
 .gate-collection span{font-size:8px;letter-spacing:.12em;color:#a9c9d7}
 .gate-collection strong{font:700 11px 'Exo 2',sans-serif;color:#b9eaff;white-space:nowrap}
 .gate-collection small{display:block;margin-top:7px;color:#9ab7c8;font-size:9px;line-height:1.5}
+
+
+/* Stage 14 — regiony poza bramami */
+.region-portal-hint{color:#9cecff}
