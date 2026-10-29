@@ -156,3 +156,11 @@ Uwaga: to stylizowana rzeźba terenu, a nie symulacja geologiczna. Nie wszystkie
 - **Krater Rdzenia** za Bramą Rdzenia: fioletowe kryształy i centralny monolit.
 - Po odblokowaniu bramy naciśnij **E** ponownie, aby przenieść się do regionu. Świecący portal w regionie pozwala wrócić do Doliny Cytadeli.
 - Stan odblokowania bram pozostaje zapisany lokalnie. Regiony są na razie strefami w obrębie jednej sceny 3D, a nie osobnymi mapami.
+
+
+## Etap 15 — Misje, strażnicy i nagrody regionalne
+Każdy region ma własną misję zapisywaną lokalnie:
+- **Ogród Pierwotny:** aktywuj Źródło Życia, Korzeń Światła i Kwiat Pamięci; pokonaj Strażnika Splotu. Nagroda: **250 pkt**.
+- **Wyżyny Prądów:** aktywuj Węzeł Północny, Węzeł Burzy i Węzeł Echa; pokonaj Strażnika Wyładowań. Nagroda: **300 pkt**.
+- **Krater Rdzenia:** aktywuj trzy Pieczęcie; pokonaj Kolosa Pustki. Nagroda: **400 pkt**.
+Interakcja: podejdź blisko i naciśnij **E**. Strażnicy są abstrakcyjnymi przeciwnikami 3D — po aktywacji wszystkich trzech punktów trzeba wykonać trzy interakcje przy strażniku. Nagroda jest przyznawana tylko raz na region, a postęp zapisuje się w localStorage.

@@ -440,6 +440,45 @@ const energyGates: EnergyGate[] = gateSpecs.map((spec,index)=>{
  return {...spec,group,ring,core,unlocked};
 });
 
+
+type RegionBeacon = { id:string; gateId:string; name:string; position:THREE.Vector3; group:THREE.Group; active:boolean };
+type RegionGuardian = { id:string; gateId:string; name:string; position:THREE.Vector3; group:THREE.Group; hits:number; defeated:boolean };
+const regionRewardSpecs = [
+ {gateId:"gate-forest",region:"Ogród Pierwotny",beacons:["Źródło Życia","Korzeń Światła","Kwiat Pamięci"],guardian:"Strażnik Splotu",reward:250},
+ {gateId:"gate-ridge",region:"Wyżyny Prądów",beacons:["Węzeł Północny","Węzeł Burzy","Węzeł Echa"],guardian:"Strażnik Wyładowań",reward:300},
+ {gateId:"gate-heart",region:"Krater Rdzenia",beacons:["Pieczęć Zewnętrzna","Pieczęć Głębi","Pieczęć Rdzenia"],guardian:"Kolos Pustki",reward:400},
+];
+const regionMissionProgress=loadStringSet("cortara-region-mission-progress");
+const regionRewardsClaimed=loadStringSet("cortara-region-rewards");
+const regionBeacons:RegionBeacon[]=[];
+const regionGuardians:RegionGuardian[]=[];
+function buildRegionMission(gate:EnergyGate,index:number):void{
+ const spec=regionRewardSpecs[index],center=gate.destination;
+ spec.beacons.forEach((name,beaconIndex)=>{
+  const angle=beaconIndex*Math.PI*2/3+.35, radius=19;
+  const x=center.x+Math.cos(angle)*radius,z=center.z+Math.sin(angle)*radius;
+  const id=gate.id+"-beacon-"+beaconIndex,active=regionMissionProgress.has(id);
+  const group=new THREE.Group();
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(1.5,2,.8,8),stoneMat);base.position.y=.4;group.add(base);
+  const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(1.35,0),new THREE.MeshStandardMaterial({color:gate.color,emissive:gate.color,emissiveIntensity:active?.25:2.1,transparent:true,opacity:active?.42:1}));
+  crystal.position.y=2.3;group.add(crystal);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(1.8,.07,8,32),new THREE.MeshBasicMaterial({color:gate.color,transparent:true,opacity:active?.18:.85}));
+  halo.rotation.x=Math.PI/2;halo.position.y=1.25;group.add(halo);
+  group.position.set(x,terrainHeight(x,z),z);group.userData.crystal=crystal;group.userData.halo=halo;group.userData.phase=beaconIndex*1.7;scene.add(group);
+  regionBeacons.push({id,gateId:gate.id,name,position:new THREE.Vector3(x,0,z),group,active});
+ });
+ const guardianId=gate.id+"-guardian",defeated=regionMissionProgress.has(guardianId);
+ const gx=center.x+1,gz=center.z-19,group=new THREE.Group();
+ const material=new THREE.MeshStandardMaterial({color:index===0?"#365c42":index===1?"#3a4b66":"#583b65",emissive:gate.color,emissiveIntensity:defeated?.15:.7,metalness:.65,roughness:.3});
+ const body=new THREE.Mesh(new THREE.DodecahedronGeometry(2.8,1),material);body.position.y=3;body.scale.y=1.25;body.castShadow=true;group.add(body);
+ const eyeMat=new THREE.MeshBasicMaterial({color:gate.color});
+ for(const side of [-1,1]){const eye=new THREE.Mesh(new THREE.SphereGeometry(.28,10,8),eyeMat);eye.position.set(side*.72,3.35,-2.35);group.add(eye);}
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(3.5,.12,8,32),new THREE.MeshBasicMaterial({color:gate.color,transparent:true,opacity:defeated?.12:.8}));
+ ring.rotation.x=Math.PI/2;ring.position.y=1;group.add(ring);
+ group.position.set(gx,terrainHeight(gx,gz),gz);group.visible=!defeated;group.userData.body=body;group.userData.ring=ring;scene.add(group);
+ regionGuardians.push({id:guardianId,gateId:gate.id,name:spec.guardian,position:new THREE.Vector3(gx,0,gz),group,hits:defeated?3:0,defeated});
+}
+
 const regionPortals: RegionPortal[] = [];
 function addRegionPortal(gate: EnergyGate): void {
  const group=new THREE.Group();
@@ -472,6 +511,7 @@ function buildRegionLandmark(gate: EnergyGate,index:number): void {
  addRegionPortal(gate);
 }
 energyGates.forEach((gate,index)=>buildRegionLandmark(gate,index));
+energyGates.forEach((gate,index)=>buildRegionMission(gate,index));
 
 let expeditionPoints = 0;
 try {
@@ -687,6 +727,7 @@ function renderJournal(): void {
     { title: "Przywrócenie sieci", detail: "Aktywuj przekaźnik w Dolinie", count: relayActivated ? 1 : 0, total: 1, done: relayActivated },
     { title: "Kolekcjoner reliktów", detail: "Odnajdź trzy starożytne artefakty", count: relics.filter((relic)=>collectedRelics.has(relic.id)).length, total: 3, done: relics.every((relic)=>collectedRelics.has(relic.id)) },
     { title: "Strażnik przejść", detail: "Odblokuj trzy bramy energetyczne", count: energyGates.filter((gate)=>gate.unlocked).length, total: 3, done: energyGates.every((gate)=>gate.unlocked) },
+    ...regionRewardSpecs.map((spec)=>{const gate=energyGates.find((item)=>item.id===spec.gateId)!;const beacons=regionBeacons.filter((item)=>item.gateId===spec.gateId&&item.active).length;const guardian=regionGuardians.find((item)=>item.gateId===spec.gateId)!;return {title:spec.region,detail:"Aktywuj 3 punkty ("+beacons+"/3) i pokonaj "+spec.guardian, count:beacons+(guardian.defeated?1:0),total:4,done:guardian.defeated};}),
   ];
   journalSummary.textContent = "ZADANIA: " + quests.filter((quest) => quest.done).length + "/" + quests.length + " UKOŃCZONE";
   expeditionPointsEl.textContent = expeditionPoints + " PKT";
@@ -778,6 +819,32 @@ function updateMission(): void {
     : "Wszystkie fragmenty są zebrane. Wróć do przekaźnika i naciśnij E, aby przywrócić sieć.";
 }
 function interact(): void {
+  const nearestBeacon=regionBeacons.filter((beacon)=>!beacon.active).map((beacon)=>({beacon,distance:Math.hypot(player.position.x-beacon.position.x,player.position.z-beacon.position.z)})).filter((item)=>item.distance<7).sort((a,b)=>a.distance-b.distance)[0];
+  if(nearestBeacon){
+    const beacon=nearestBeacon.beacon;beacon.active=true;regionMissionProgress.add(beacon.id);localStorage.setItem("cortara-region-mission-progress",JSON.stringify([...regionMissionProgress]));
+    const crystal=beacon.group.userData.crystal as THREE.Mesh;const halo=beacon.group.userData.halo as THREE.Mesh;
+    (crystal.material as THREE.MeshStandardMaterial).emissiveIntensity=.25;(crystal.material as THREE.MeshStandardMaterial).opacity=.42;(halo.material as THREE.MeshBasicMaterial).opacity=.18;
+    const spec=regionRewardSpecs.find((item)=>item.gateId===beacon.gateId)!;
+    const count=regionBeacons.filter((item)=>item.gateId===beacon.gateId&&item.active).length;
+    recordJournal("Aktywowano punkt regionu: "+beacon.name);renderJournal();playDiscoveryChime();
+    messageEl.textContent=beacon.name+" aktywowany ("+count+"/3). "+(count===3?"Wszystkie punkty działają — znajdź strażnika!":"Aktywuj pozostałe punkty energii.");
+    showToast("Punkt energii "+count+"/3 · "+spec.region);return;
+  }
+  const nearestGuardian=regionGuardians.filter((guardian)=>!guardian.defeated).map((guardian)=>({guardian,distance:Math.hypot(player.position.x-guardian.position.x,player.position.z-guardian.position.z)})).filter((item)=>item.distance<8).sort((a,b)=>a.distance-b.distance)[0];
+  if(nearestGuardian){
+    const guardian=nearestGuardian.guardian,spec=regionRewardSpecs.find((item)=>item.gateId===guardian.gateId)!;
+    const activated=regionBeacons.filter((beacon)=>beacon.gateId===guardian.gateId&&beacon.active).length;
+    if(activated<3){messageEl.textContent=guardian.name+" jest chroniony polem energetycznym. Najpierw aktywuj 3 punkty energii ("+activated+"/3).";showToast("Cel misji: aktywuj trzy punkty energii");return;}
+    guardian.hits++;const body=guardian.group.userData.body as THREE.Mesh;
+    body.scale.setScalar(Math.max(.45,1-guardian.hits*.18));body.rotation.y+=.9;
+    if(guardian.hits<3){messageEl.textContent=guardian.name+" osłabiony: "+guardian.hits+"/3. Podejdź i naciśnij E ponownie.";showToast("Strażnik osłabiony · "+guardian.hits+"/3");return;}
+    guardian.defeated=true;guardian.group.visible=false;regionMissionProgress.add(guardian.id);localStorage.setItem("cortara-region-mission-progress",JSON.stringify([...regionMissionProgress]));
+    const rewardKey=guardian.gateId;
+    if(!regionRewardsClaimed.has(rewardKey)){regionRewardsClaimed.add(rewardKey);localStorage.setItem("cortara-region-rewards",JSON.stringify([...regionRewardsClaimed]));expeditionPoints+=spec.reward;localStorage.setItem("cortara-expedition-points",String(expeditionPoints));}
+    recordJournal("Ukończono misję regionu: "+spec.region+" (+"+spec.reward+" pkt)");renderJournal();playDiscoveryChime();
+    messageEl.textContent="Misja ukończona: "+spec.region+". Strażnik pokonany, nagroda "+spec.reward+" punktów ekspedycji.";
+    showToast("Misja ukończona · +"+spec.reward+" pkt");return;
+  }
   const nearestRegionPortal=regionPortals.map((portal)=>({portal,distance:Math.hypot(player.position.x-portal.position.x,player.position.z-portal.position.z)})).filter((item)=>item.distance<12).sort((a,b)=>a.distance-b.distance)[0];
   if(nearestRegionPortal){
     const portal=nearestRegionPortal.portal;
@@ -1040,6 +1107,8 @@ function animate(): void {
   player.position.y = terrainHeight(player.position.x, player.position.z);
   suit.position.y = 1.2 + (input.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.05 : 0);
   relayOrb.rotation.y += delta * 0.62; relayOrb.rotation.x += delta * 0.18; relayRing.rotation.z += delta * 0.42;
+  regionBeacons.forEach((beacon,index)=>{if(beacon.active)return;const crystal=beacon.group.userData.crystal as THREE.Mesh;const halo=beacon.group.userData.halo as THREE.Mesh;crystal.rotation.y+=delta*.55;crystal.position.y=2.3+Math.sin(elapsed*1.6+index)*.22;halo.rotation.z+=delta*.45;});
+  regionGuardians.forEach((guardian,index)=>{if(guardian.defeated)return;const body=guardian.group.userData.body as THREE.Mesh;const ring=guardian.group.userData.ring as THREE.Mesh;body.rotation.y+=delta*(.2+index*.06);body.position.y=3+Math.sin(elapsed*1.4+index)*.35;ring.rotation.z+=delta*.35;});
   energyGates.forEach((gate,index)=>{
     const phase=Number(gate.group.userData.phase??index);
     gate.ring.rotation.y=Math.sin(elapsed*.45+phase)*.06;
